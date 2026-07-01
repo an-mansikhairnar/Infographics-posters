@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="52" height="52" viewBox="0 0 52 52">
+  <defs>
+    <clipPath id="clip-ic-professional-design">
+      <rect width="52" height="52"/>
+    </clipPath>
+  </defs>
+  <g id="ic-professional-design" clip-path="url(#clip-ic-professional-design)">
+    <g id="Group_15" data-name="Group 15" transform="translate(9.09 2.993)">
+      <path id="Ellipse_9" data-name="Ellipse 9" d="M15.5-1.5A16.995,16.995,0,0,1,27.52,27.52,17,17,0,1,1,8.882-.163,16.9,16.9,0,0,1,15.5-1.5Zm0,31a14,14,0,1,0-14-14A14.015,14.015,0,0,0,15.5,29.5Z" transform="translate(1.069 0.727)" fill="#07b0c4"/>
+      <path id="Ellipse_10" data-name="Ellipse 10" d="M7.75-1.5A9.25,9.25,0,1,1-1.5,7.75,9.26,9.26,0,0,1,7.75-1.5Zm0,15.5A6.25,6.25,0,1,0,1.5,7.75,6.257,6.257,0,0,0,7.75,14Z" transform="translate(8.818 8.476)" fill="#07b0c4"/>
+      <path id="Path_6" data-name="Path 6" d="M9.032,33.312l-.078,0a1.5,1.5,0,0,1-1.324-.965L5.514,26.777l-4.926.707A1.5,1.5,0,0,1-.967,25.329L4.846,13.7a1.5,1.5,0,1,1,2.683,1.342L3,24.108l3.278-.471a1.5,1.5,0,0,1,1.615.952L9.225,28.1l5.31-10.524a1.5,1.5,0,1,1,2.678,1.351L10.371,32.488A1.5,1.5,0,0,1,9.032,33.312Z" transform="translate(0.352 13.476)" fill="#07b0c4"/>
+      <path id="Path_7" data-name="Path 7" d="M15.805,33.312a1.5,1.5,0,0,1-1.344-.834L7.737,18.916a1.5,1.5,0,1,1,2.688-1.333l5.23,10.548,1.417-3.564a1.5,1.5,0,0,1,1.607-.931l3.278.471-4.531-9.062A1.5,1.5,0,1,1,20.11,13.7l5.812,11.625a1.5,1.5,0,0,1-1.555,2.156l-4.944-.71L17.2,32.366a1.5,1.5,0,0,1-1.332.945Z" transform="translate(8.513 13.476)" fill="#07b0c4"/>
+    </g>
+  </g>
+</svg>

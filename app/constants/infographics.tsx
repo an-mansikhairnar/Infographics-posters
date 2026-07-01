@@ -12,7 +12,7 @@ export const infographics = [
     id: 2,
     image: "/shooter.jpg",
     title: "How social media influences consumer behavior",
-    category: "Marketing",
+    category: "Social Media",
     description:
       "Social media platforms have transformed the way consumers discover, evaluate, and purchase products.",
     hits: 782,
@@ -21,7 +21,7 @@ export const infographics = [
     id: 3,
     image: "/game.png",
     title: "The future of artificial intelligence",
-    category: "Technology",
+    category: "Social Media",
     description:
       "AI continues to reshape industries through automation, predictive analytics, and intelligent systems.",
     hits: 5124,

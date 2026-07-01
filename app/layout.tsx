@@ -1,31 +1,34 @@
-import { Roboto } from "next/font/google";
-import "./globals.css";
-import Navbar from "./component/Navbar/page";
-import CategoriesSidebar from "./component/CategoriesSidebar/page";
+import { Roboto } from 'next/font/google';
+import './globals.css';
+import Navbar from './component/Navbar/Navbar';
+import CategoriesSidebar from './component/CategoriesSidebar/CategoriesSidebar';
+import { Suspense } from 'react';
+import { LoadingProvider } from './context/loader';
 
 const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
 });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-    <html lang="en">
-      <body className={roboto.className}>
-      <Navbar />
-      <div className='flex'>
-        <CategoriesSidebar />
-        <div className='flex-1'>
-          {children}
-        </div>
-      </div>
-      </body>
-    </html>
+      <html lang='en'>
+        <body>
+          <LoadingProvider>
+
+
+          {/* <Suspense fallback={null}> */}
+          <Navbar />
+          {/* </Suspense> */}
+
+          <div className='flex'>
+            <CategoriesSidebar />
+            <div className='flex-1'>{children}</div>
+          </div>
+          </LoadingProvider>
+        </body>
+      </html>
     </>
   );
 }
