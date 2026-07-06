@@ -40,7 +40,6 @@ export default function InfographicCard({ item }: InfographicCardProps) {
     fetchCategories();
   }, []);
 
-  // const imageUrl = `${item.imgPrefix.replace(/\/$/, '')}/${item.thumbImageUrl.replace(/^\//, '')}`;
   const imageUrl =
     item.imgPrefix && item.thumbImageUrl ? `${item.imgPrefix.replace(/\/$/, '')}/${item.thumbImageUrl.replace(/^\//, '')}` : null;
   return (
@@ -80,7 +79,7 @@ export default function InfographicCard({ item }: InfographicCardProps) {
 
           <button
             onClick={handleMoreClick}
-            className='text-[11px] rounded border border-gray-300 px-2 py-1 text-gray-600 hover:bg-gray-100'
+            className='text-[9px] rounded border border-gray-300 text-gray-600 px-1 py-1 hover:bg-cyan-500 hover:text-white'
           >
             More
           </button>

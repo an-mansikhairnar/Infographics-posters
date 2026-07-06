@@ -8,8 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
-  const { query, setQuery, handleSearch, handleKeyDown } = useSearch();
-
+  const { query, setQuery, handleSearch, handleKeyDown } = useSearch('', true);
   const searchParams = useSearchParams();
   const search = searchParams.get('search');
   const pathname = usePathname();
@@ -40,24 +39,9 @@ export default function Navbar() {
         <Link href='/site-map' className={navLinkClass('/site-map')}>
           Site Map
         </Link>
-
-        {/* <Link href='/' className='hover:text-cyan-400 transition-colors'>
-          Home
-        </Link>
-        <Link href='/submit-infographics' className='hover:text-cyan-400 transition-colors'>
-          Submit Infographics
-        </Link>
-        <Link href='/contact' className='hover:text-cyan-400 transition-colors'>
-          Contact Us
-        </Link>
-        <Link href='/site-map' className='hover:text-cyan-400 transition-colors'>
-          Site Map
-        </Link> */}
       </div>
 
       <div className='flex items-center ml-auto mr-4 gap-3'>
-        {/* <button className='bg-cyan-500 text-white hover:bg-cyan-600 rounded-full px-12 py-2 text-[14px]'>Design My Infographic</button> */}
-
         <Link className='bg-cyan-500 text-white hover:bg-cyan-600 rounded-full px-12 py-2 text-[14px]' href='/design-my-infographic'>
           Design My Infographic
         </Link>

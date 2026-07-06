@@ -2,7 +2,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type KeyboardEvent } from 'react';
 import { useState } from 'react';
 
-export const useSearch = (initialQuery: string = '') => {
+export const useSearch = (initialQuery: string = '', clearAfterSearch: boolean = false) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -24,14 +24,17 @@ export const useSearch = (initialQuery: string = '') => {
 
   const handleSearch = () => {
     router.push(buildUrl(query));
+
+    if (clearAfterSearch) {
+      setQuery('');
+    }
   };
 
-const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-  if (e.key === 'Enter') {
-    handleSearch();
-    setQuery('');
-  }
-};
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const clearSearch = () => {
     setQuery('');

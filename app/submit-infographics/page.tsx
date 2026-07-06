@@ -2,10 +2,22 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { FacebookShareButton, LinkedinShareButton, PinterestShareButton, TwitterShareButton } from 'react-share';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import CheckoutComponent from '../component/CheckoutComponent/CheckoutComponent';
 
 export default function SubmitInfographics() {
   const [showForm, setShowForm] = useState(false);
+  const shareUrl = 'https://www.infographicsposters.com/submit-infographics.html';
+  const title = 'Submit Infographics';
+  const media = 'https://www.infographicsposters.com/logo-infographics.png'; // Replace with your image URL
 
+  const initialOptions = {
+    clientId: 'AVxkOR_shXf8aMaFXhn_MZsdnTghNp4sORTdWfzbSumv4PvOdrxdWQtiZ0SulbQM2mlHbaXYdfFdwfyW',
+    currency: 'USD',
+    intent: 'capture',
+    'disable-funding': 'card',
+  };
   return (
     <div className='flex-1 p-5'>
       <div className='rounded-lg border border-gray-300 bg-white p-5'>
@@ -17,10 +29,21 @@ export default function SubmitInfographics() {
 
               {/* Social Buttons */}
               <div className='mb-6 flex flex-wrap gap-2'>
-                <Image src='/assets/pinterest.svg' alt='Pinterest' width={50} height={32} />
-                <Image src='/assets/Facebook.svg' alt='Facebook' width={50} height={32} />
-                <Image src='/assets/twitter.svg' alt='Twitter' width={50} height={32} />
-                <Image src='/assets/linkedin.svg' alt='LinkedIn' width={50} height={32} />
+                <PinterestShareButton url={shareUrl} media={media} description={title}>
+                  <Image src='/assets/pinterest.svg' alt='Pinterest' width={50} height={32} className='cursor-pointer' />
+                </PinterestShareButton>
+
+                <FacebookShareButton url={shareUrl} hashtag='#Infographics'>
+                  <Image src='/assets/Facebook.svg' alt='Facebook' width={50} height={32} className='cursor-pointer' />
+                </FacebookShareButton>
+
+                <TwitterShareButton url={shareUrl} title={title} hashtags={['Infographics']}>
+                  <Image src='/assets/twitter.svg' alt='Twitter' width={50} height={32} className='cursor-pointer' />
+                </TwitterShareButton>
+
+                <LinkedinShareButton url={shareUrl} title={title} summary='Submit your infographic to Infographics Posters.'>
+                  <Image src='/assets/linkedin.svg' alt='LinkedIn' width={50} height={32} className='cursor-pointer' />
+                </LinkedinShareButton>
               </div>
 
               <div className='space-y-4 text-[12px]'>
@@ -55,7 +78,7 @@ export default function SubmitInfographics() {
                     With Infographics Posters, you will not only get an opportunity of showcasing your creativity to the online audience,
                     but there are several other benefits too, which includes –
                   </p>
-                  <ul className='list-disc pl-5'>
+                  <ul className='list-disc pl-5 mt-2'>
                     <li>You will get an SEO friendly link to your infographics page (author URL).</li>
                     <li>Your infographics can help in getting traffic to your site.</li>
                     <li>You can use your infographics poster for branding promotion.</li>
@@ -68,7 +91,7 @@ export default function SubmitInfographics() {
                     Before publishing any infographics, we review it to make sure that it is fit to create the best possible user experience
                     for our visitors. So, for publishing your infographics with us, make sure it adheres to the following guidelines –
                   </p>
-                  <ul className='list-disc pl-5'>
+                  <ul className='list-disc pl-5 mt-2'>
                     <li>It should not be based on subjects like porn and gambling.</li>
                     <li>It should not contain nudity or obscene images.</li>
                     <li>It must have short yet creative title.</li>
@@ -93,12 +116,27 @@ export default function SubmitInfographics() {
             </div>
 
             {/* Payment Card */}
-            <div className='lg:col-span-4'>
+            {/* <div className='lg:col-span-4'>
               <div className='overflow-hidden rounded-lg border border-gray-300'>
                 <div className='bg-gray-100 p-3 text-[12px] font-semibold'>Now Pay Only $30</div>
 
-                <div className='p-5'>
-                  <div id='paypal-button-container' className='min-h-[120px]' />
+                <div className='p-4'>
+                  <button className='w-full bg-[#009cde] py-3 font-semibold text-white'>PayPal Checkout</button>
+
+                  <p className='mt-2 text-center text-s'>The safer, easier way to pay</p>
+                </div>
+              </div>
+            </div> */}
+
+            <div className='lg:col-span-4'>
+              <div className='overflow-hidden rounded-lg border border-gray-300'>
+                <div className='bg-gray-100 p-3 text-[12px] font-semibold'>Now Pay Only $30</div>
+                <div className='p-4'>
+                  <PayPalScriptProvider options={initialOptions}>
+                    <CheckoutComponent amount='30.00' />
+                  </PayPalScriptProvider>
+
+                  <p className='mt-2 text-center text-sm'>The safer, easier way to pay</p>
                 </div>
               </div>
             </div>

@@ -1,4 +1,15 @@
+'use client';
+
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import Image from 'next/image';
+import CheckoutComponent from '../component/CheckoutComponent/CheckoutComponent';
+
+const initialOptions = {
+  clientId: 'AVxkOR_shXf8aMaFXhn_MZsdnTghNp4sORTdWfzbSumv4PvOdrxdWQtiZ0SulbQM2mlHbaXYdfFdwfyW',
+  currency: 'USD',
+  intent: 'capture',
+  'disable-funding': 'card',
+};
 export default function SubmitInfographicsPage() {
   return (
     <div className='flex-1 rounded border border-gray-300 bg-white p-4 m-4 text-[14px]'>
@@ -108,8 +119,8 @@ export default function SubmitInfographicsPage() {
               impactful infographic.
             </li>
             <li className='m-0'>
-              Review and Finalize: We will send you the finished infographic for your review. If any adjustments are needed, we will make sure
-              everything is perfect before finalizing.
+              Review and Finalize: We will send you the finished infographic for your review. If any adjustments are needed, we will make
+              sure everything is perfect before finalizing.
             </li>
           </ul>
 
@@ -144,13 +155,16 @@ export default function SubmitInfographicsPage() {
         </div>
 
         <div>
-          <div className='border border-gray-300 bg-white'>
-            <div className='border-b border-gray-300 px-4 py-3 font-semibold'>Now Pay Only $75</div>
+          <div className='lg:col-span-4'>
+            <div className='overflow-hidden rounded-lg border border-gray-300'>
+              <div className='bg-gray-100 p-3 text-[12px] font-semibold'>Now Pay Only $75</div>
+              <div className='p-4'>
+                <PayPalScriptProvider options={initialOptions}>
+                  <CheckoutComponent amount='75.00' />
+                </PayPalScriptProvider>
 
-            <div className='p-4'>
-              <button className='w-full bg-[#009cde] py-3 font-semibold text-white'>PayPal Checkout</button>
-
-              <p className='mt-2 text-center text-s'>The safer, easier way to pay</p>
+                <p className='mt-2 text-center text-sm'>The safer, easier way to pay</p>
+              </div>
             </div>
           </div>
         </div>

@@ -4,14 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Category } from '@/app/interfaces/category';
 import { getCategories } from '@/app/lib/categories';
-import { useLoading } from '@/app/context/loader';
 
 export default function CategoriesSidebar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [categories, setCategories] = useState<Category[]>([]);
   const activeCategory = searchParams.get('category');
-  const { setLoading } = useLoading();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -27,11 +25,10 @@ export default function CategoriesSidebar() {
   }, []);
 
   const handleCategoryClick = (category: string) => {
-    setLoading(true);
     router.push(`/?category=${encodeURIComponent(category)}`);
   };
   return (
-    <aside className='w-[180px] border-t border-l bg-white'>
+    <aside className='w-[180px] border-b border-l bg-white'>
       <div className='flex items-center gap-2 bg-gray-100 border-b border-gray-300 px-4 py-2 text-gray-800 uppercase text-sm font-medium'>
         <span className='w-2 h-2 bg-black'></span>
         <span className='border-b-black'>Categories</span>
@@ -57,51 +54,3 @@ export default function CategoriesSidebar() {
     </aside>
   );
 }
-// 'use client';
-
-// import { useEffect, useState } from 'react';
-// import { useRouter } from 'next/navigation';
-// import { Category } from '@/app/interfaces/category';
-// import { getCategories } from '@/app/lib/categories';
-
-// export default function CategoriesSidebar() {
-//   const router = useRouter();
-//   const [categories, setCategories] = useState<Category[]>([]);
-
-//   useEffect(() => {
-//     const fetchCategories = async () => {
-//       try {
-//         const data = await getCategories();
-//         setCategories(data.filter((item) => item.status === 1));
-//       } catch (error) {
-//         console.error(error);
-//       }
-//     };
-
-//     fetchCategories();
-//   }, []);
-//   const handleCategoryClick = (category: string) => {
-//     router.push(`/?category=${encodeURIComponent(category)}`);
-//   };
-
-//   return (
-//     <aside className='w-[180px] border-t border-l border-b border-gray-300 bg-white'>
-//       <div className='flex items-center gap-2 bg-gray-100 border-b border-gray-300 px-4 py-2 text-gray-800 uppercase text-sm font-medium'>
-//         <span className='w-2 h-2 bg-black'></span>
-//         <span className='border-b-black'>Categories</span>
-//       </div>
-
-//       <div className='flex flex-col'>
-//         {categories.map((category) => (
-//           <button
-//             key={category.catId}
-//             onClick={() => handleCategoryClick(category.title)}
-//             className='w-[177px] h-[30px] flex items-center text-left text-gray-500 font-medium px-4 border-b border-gray-200  transition-colors text-[13px]'
-//           >
-//             {category.title}
-//           </button>
-//         ))}
-//       </div>
-//     </aside>
-//   );
-// }
