@@ -32,11 +32,9 @@ export default function CheckoutComponent({ amount }: CheckoutComponentProps) {
       }
       onApprove={async (_, actions) => {
         const details = await actions.order?.capture();
-        console.log(details);
         alert(`Payment of $${amount} completed successfully!`);
       }}
       onCancel={(data) => {
-        console.log('Payment cancelled:', data);
         alert('Payment was cancelled.');
       }}
       onError={(err) => {

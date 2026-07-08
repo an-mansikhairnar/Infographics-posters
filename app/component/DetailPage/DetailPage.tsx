@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Article } from '@/app/interfaces/infographics';
 import { Category } from '@/app/interfaces/category';
+import { LoadingSpinner } from '@/app/context/loader';
 
 export default function DetailPage() {
   const params = useParams();
@@ -12,11 +13,14 @@ export default function DetailPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
 
     const fetchArticle = async () => {
+      setLoading(true);
+
       try {
         const res = await fetch(`/api/articles/${id}`);
 
@@ -25,15 +29,21 @@ export default function DetailPage() {
         }
 
         const data: Article = await res.json();
+
+        // Optional: keep spinner visible a little longer
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         setArticle(data);
       } catch (error) {
         console.error('Failed to fetch article:', error);
-      } 
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchArticle();
   }, [id]);
-
+  
   useEffect(() => {
     if (!article) return;
 
@@ -79,6 +89,13 @@ export default function DetailPage() {
       console.error('Failed to copy text: ', err);
     }
   };
+  if (loading) {
+    return (
+      <div className='flex justify-center items-center py-20'>
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (!article) {
     return <div className='p-5'>Article not found.</div>;
@@ -133,7 +150,12 @@ export default function DetailPage() {
             COPY {copied && ''}
           </button>
 
-          <textarea readOnly rows={6} className='mt-3 w-full rounded border border-gray-300 p-3 text-gray-500 text-[10px]' value={embedCode} />
+          <textarea
+            readOnly
+            rows={6}
+            className='mt-3 w-full rounded border border-gray-300 p-3 text-gray-500 text-[10px]'
+            value={embedCode}
+          />
         </div>
       </div>
       {article.authorUrl && (

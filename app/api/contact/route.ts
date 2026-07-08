@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  const res = await fetch('https://server.infographicsposters.com/contactUs/mail', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+    const res = await fetch('https://server.infographicsposters.com/contactUs/mail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-  const text = await res.text();
-  return NextResponse.json({ ok: res.ok, text }, { status: res.status });
+    const text = await res.text();
+
+    if (!res.ok) {
+      return NextResponse.json({ ok: false, text }, { status: res.status });
+    }
+
+    return NextResponse.json({ ok: true, text }, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to send contact form';
+    return NextResponse.json({ ok: false, text: message }, { status: 502 });
+  }
 }

@@ -31,7 +31,6 @@ export default function InfographicCard({ item }: InfographicCardProps) {
 
         const matchedCategory = response.find((category: Category) => category.catId === item.catId);
 
-        console.log(matchedCategory?.title);
         setCategoryName(matchedCategory?.title || '');
       } catch (error) {
         console.error('Failed to fetch categories:', error);
@@ -44,13 +43,13 @@ export default function InfographicCard({ item }: InfographicCardProps) {
     item.imgPrefix && item.thumbImageUrl ? `${item.imgPrefix.replace(/\/$/, '')}/${item.thumbImageUrl.replace(/^\//, '')}` : null;
   return (
     <>
-      {loading && (
+      {/* {loading && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-white/80'>
           <div className='h-12 w-12 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent' />
         </div>
-      )}
+      )} */}
 
-      <div className='w-[187px] sm:w-[200px] md:w-[220px] lg:w-[200px] bg-white border border-gray-300 rounded-sm overflow-hidden'>
+      <div className='w-[187px] sm:w-[200px] md:w-[220px] lg:w-[200px] bg-white border border-gray-300 rounded-sm overflow-hidden cursor-pointer'>
         <div className='w-full overflow-hidden flex justify-center p-2'>
           {imageUrl ? (
             <Image src={imageUrl} alt={item.title} width={300} height={500} className='max-w-full h-auto object-contain max-h-[287px]' />
@@ -79,7 +78,7 @@ export default function InfographicCard({ item }: InfographicCardProps) {
 
           <button
             onClick={handleMoreClick}
-            className='text-[9px] rounded border border-gray-300 text-gray-600 px-1 py-1 hover:bg-cyan-500 hover:text-white'
+            className='text-[9px] rounded border border-gray-300 text-gray-600 px-1 py-1 hover:bg-cyan-500 hover:text-white cursor-pointer'
           >
             More
           </button>

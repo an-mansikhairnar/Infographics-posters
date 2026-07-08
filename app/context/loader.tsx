@@ -71,16 +71,11 @@ export function useLoading() {
 
   return context;
 }
-
 export function LoadingSpinner() {
-  const { loading } = useLoading();
-
-  if (!loading) return null;
-
   return (
-    <div className='flex items-center justify-center gap-3 py-10'>
+    <div className="flex items-center justify-center gap-3">
       <div
-        className='w-8 h-8 rounded-full animate-spin'
+        className="w-8 h-8 rounded-full animate-spin"
         style={{
           border: '6px solid transparent',
           borderTopColor: '#171cba',
@@ -89,7 +84,9 @@ export function LoadingSpinner() {
           borderLeftColor: '#34A853',
         }}
       />
-      <p className='text-gray-700 text-base'>Loading More Infographics...</p>
+      <p className="text-gray-700 text-base">
+        Loading More Infographics...
+      </p>
     </div>
   );
 }

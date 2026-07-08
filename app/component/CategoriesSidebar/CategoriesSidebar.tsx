@@ -42,8 +42,8 @@ export default function CategoriesSidebar() {
             <button
               key={category.catId}
               onClick={() => handleCategoryClick(category.title)}
-              className={`w-[177px] h-[30px] flex items-center text-left px-4 border-b border-gray-200 transition-colors text-[12px] border-l-2 border-r-2 font-medium text-gray-700 hover:text-cyan-500 hover:border-l-cyan-500 hover:border-r-cyan-500 ${
-                isActive ? 'text-cyan-500 border-l-cyan-500 border-r-cyan-500' : 'text-gray-500 border-l-transparent border-r-transparent'
+              className={`w-[177px] h-[30px] flex items-center text-left px-4 border-b border-gray-200 border-r-2 transition-colors text-[12px] font-medium hover:text-cyan-500 hover:border-l-cyan-500 hover:border-r-cyan-600 ${
+                isActive ? 'text-cyan-600 border-l-cyan-500 border-r-cyan-600' : 'text-gray-500 border-l-transparent border-r-transparent'
               }`}
             >
               {category.title}
