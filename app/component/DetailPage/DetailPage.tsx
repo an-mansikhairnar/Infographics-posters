@@ -72,8 +72,15 @@ export default function DetailPage() {
 
   const fullImage = article?.fullImageUrl?.startsWith('/') ? article.fullImageUrl.slice(1) : article?.fullImageUrl;
 
+  const siteUrl = process.env.SITE_URL;
+
   const embedCode = article
-    ? `<a href="/${categorySlug}/${article.alias}/${article.articleId}"><img src="https://www.infographicsposters.com/${fullImage}" style="max-width:100%" alt="${article.title}" /></a><p>Filed at Infographicsposters.com in <a href="https://www.infographicsposters.com/${categorySlug}">${categoryName} Infographics</a> </p>`
+    ? `<a href="${siteUrl}/${categorySlug}/${article.alias}/${article.articleId}">
+         <img src="${siteUrl}/${fullImage}" style="max-width:100%" alt="${article.title}" />
+       </a>
+       <p>Filed at Infographicsposters.com in 
+         <a href="${siteUrl}/${categorySlug}">${categoryName} Infographics</a>
+       </p>`
     : '';
   const imageUrl = `${article?.imgPrefix.replace(/\/$/, '')}/${article?.fullImageUrl.replace(/^\//, '')}`;
 

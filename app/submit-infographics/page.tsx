@@ -1,23 +1,188 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FacebookShareButton, LinkedinShareButton, PinterestShareButton, TwitterShareButton } from 'react-share';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import CheckoutComponent from '../component/CheckoutComponent/CheckoutComponent';
+import { getCategories } from '../lib/categories';
+import { Category } from '../interfaces/category';
 
 export default function SubmitInfographics() {
   const [showForm, setShowForm] = useState(false);
-  const shareUrl = 'https://www.infographicsposters.com/submit-infographics.html';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  const shareUrl = `${siteUrl}/submit-infographics.html`;
   const title = 'Submit Infographics';
-  const media = 'https://www.infographicsposters.com/logo-infographics.png'; // Replace with your image URL
+  const media = `${siteUrl}/logo-infographics.png`;
+
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const isPaypalConfigured = Boolean(paypalClientId);
 
   const initialOptions = {
-    clientId: 'AVxkOR_shXf8aMaFXhn_MZsdnTghNp4sORTdWfzbSumv4PvOdrxdWQtiZ0SulbQM2mlHbaXYdfFdwfyW',
+    clientId: paypalClientId!,
     currency: 'USD',
     intent: 'capture',
     'disable-funding': 'card',
   };
+
+  const [submitAttempt, setSubmitAttempt] = useState(false);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    catId: '',
+    email: '',
+    description: '',
+    imgUrl: '',
+    // Optional social fields
+    facebook: '',
+    facebookUrl: '',
+    twitter: '',
+    twitterUrl: '',
+    instagram: '',
+    instagramUrl: '',
+    // Optional
+    liveUrl: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setSubmitAttempt(false);
+  };
+
+  const [paymentData, setPaymentData] = useState<{
+    orderId: string;
+    payerId: string;
+    transactionId: string;
+    amount: string;
+    currency: string;
+    state: string;
+    address: string;
+    clientName: string;
+  } | null>(null);
+
+  const addNewArticle = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Payment is mandatory
+    if (!paymentData) {
+      alert('Please complete the payment first.');
+      return;
+    }
+
+    // PayPal transaction is mandatory
+    if (!paymentData.transactionId) {
+      alert('PayPal payment was not completed.');
+      return;
+    }
+
+    // Validate form
+    if (!formData.title.trim() || !formData.catId || !formData.email.trim() || !formData.description.trim() || !formData.imgUrl.trim()) {
+      setSubmitAttempt(true);
+      return;
+    }
+
+    // Everything is valid
+    setSubmitAttempt(false);
+
+    try {
+      const payload = {
+        title: formData.title.trim(),
+        catId: Number(formData.catId),
+        email: formData.email.trim(),
+        desc: formData.description.trim(),
+        imgUrl: formData.imgUrl.trim(),
+        // Optional social fields
+        facebook: formData.facebook.trim() || '',
+        facebookUrl: formData.facebookUrl.trim() || '',
+        twitter: formData.twitter.trim() || '',
+        twitterUrl: formData.twitterUrl.trim() || '',
+        instagram: '',
+        instagramUrl: '',
+        // PayPal
+        paypalTransaction: paymentData.transactionId,
+        payerId: paymentData.payerId,
+        paypalId: paymentData.orderId,
+        clientName: paymentData.clientName,
+        amount: Number(paymentData.amount),
+        currency: paymentData.currency,
+        state: paymentData.state,
+        address: paymentData.address,
+        liveUrl: '',
+      };
+
+      console.log('Sending payload:', payload);
+
+      const response = await fetch('/api/articles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      console.log('API response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to submit infographic');
+      }
+
+      alert('Congratulations! Your infographic was submitted successfully.');
+
+      // Reset everything AFTER successful submission
+      resetForm();
+      setPaymentData(null);
+      setShowForm(false);
+      setSubmitAttempt(false);
+    } catch (error) {
+      console.error('Error:', error);
+
+      alert(error instanceof Error ? error.message : 'Something went wrong.');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      catId: '',
+      email: '',
+      description: '',
+      imgUrl: '',
+      facebook: '',
+      facebookUrl: '',
+      twitter: '',
+      twitterUrl: '',
+      instagram: '',
+      instagramUrl: '',
+      liveUrl: '',
+    });
+
+    setSubmitAttempt(false);
+  };
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data.filter((item) => item.status === 1));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <div className='flex-1 p-5'>
       <div className='rounded-lg border border-gray-300 bg-white p-5'>
@@ -116,27 +281,31 @@ export default function SubmitInfographics() {
             </div>
 
             {/* Payment Card */}
-            {/* <div className='lg:col-span-4'>
-              <div className='overflow-hidden rounded-lg border border-gray-300'>
-                <div className='bg-gray-100 p-3 text-[12px] font-semibold'>Now Pay Only $30</div>
-
-                <div className='p-4'>
-                  <button className='w-full bg-[#009cde] py-3 font-semibold text-white'>PayPal Checkout</button>
-
-                  <p className='mt-2 text-center text-s'>The safer, easier way to pay</p>
-                </div>
-              </div>
-            </div> */}
 
             <div className='lg:col-span-4'>
               <div className='overflow-hidden rounded-lg border border-gray-300'>
                 <div className='bg-gray-100 p-3 text-[12px] font-semibold'>Now Pay Only $30</div>
-                <div className='p-4'>
-                  <PayPalScriptProvider options={initialOptions}>
-                    <CheckoutComponent amount='30.00' />
-                  </PayPalScriptProvider>
 
-                  <p className='mt-2 text-center text-sm'>The safer, easier way to pay</p>
+                <div className='p-4'>
+                  {isPaypalConfigured ? (
+                    <>
+                      <PayPalScriptProvider options={initialOptions}>
+                        <CheckoutComponent
+                          amount='30.00'
+                          onPaymentSuccess={(payment) => {
+                            setPaymentData(payment);
+                            setShowForm(true);
+                          }}
+                        />
+                      </PayPalScriptProvider>
+
+                      <p className='mt-2 text-center text-sm'>The safer, easier way to pay</p>
+                    </>
+                  ) : (
+                    <div className='rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800'>
+                      PayPal checkout is unavailable until a valid PayPal client ID is configured.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,88 +317,193 @@ export default function SubmitInfographics() {
           <div>
             <h2 className='mb-2 text-3xl font-bold text-sky-500'>Add New Infographics</h2>
 
-            <p className='mb-6 text-[12px] text-gray-500'>
+            <p className='mb-6 text-[12px] text-black-500 font-medium'>
               Send an email. Fields marked with
               <span className='text-red-500'> *</span> are required.
             </p>
 
-            <form className='space-y-5'>
-              {/* <FormField label='Title' required>
-                <input type='text' placeholder='Title' className='w-full rounded border p-2' />
-              </FormField>
+            <div className='w-full'>
+              <form onSubmit={addNewArticle} className='mt-6'>
+                {/* Title */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>
+                    Title <span className='text-red-500'>*</span>
+                  </label>
 
-              <FormField label='Category' required>
-                <select className='w-full rounded border p-2'>
-                  <option>Select Category</option>
-                </select>
-              </FormField>
+                  <input
+                    type='text'
+                    id='title'
+                    name='title'
+                    value={formData.title}
+                    onChange={handleChange}
+                    placeholder='Title'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
 
-              <FormField label='Email' required>
-                <input type='email' placeholder='Email' className='w-full rounded border p-2' />
-              </FormField>
+                {/* Category */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>
+                    Category <span className='text-red-500'>*</span>
+                  </label>
 
-              <FormField label='Description' required>
-                <textarea rows={4} placeholder='Full description text' className='w-full rounded border p-2' />
-              </FormField>
+                  <select
+                    id='catId'
+                    name='catId'
+                    value={formData.catId}
+                    onChange={handleChange}
+                    className='w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  >
+                    <option value='' disabled>
+                      Please select category
+                    </option>
 
-              <FormField label='Infographics URL' required>
-                <input type='text' placeholder='Image URL' className='w-full rounded border p-2' />
-              </FormField>
+                    {categories.map((category) => (
+                      <option key={category.catId} value={category.catId}>
+                        {category.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <FormField label='Facebook'>
-                <input type='text' placeholder='Facebook' className='w-full rounded border p-2' />
-              </FormField>
+                {/* Email */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>
+                    Email <span className='text-red-500'>*</span>
+                  </label>
 
-              <FormField label='Facebook URL'>
-                <input type='text' placeholder='Facebook URL' className='w-full rounded border p-2' />
-              </FormField>
+                  <input
+                    type='email'
+                    id='email'
+                    name='email'
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder='Email'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
 
-              <FormField label='Twitter'>
-                <input type='text' placeholder='Twitter' className='w-full rounded border p-2' />
-              </FormField>
+                {/* Description */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>
+                    Description <span className='text-red-500'>*</span>
+                  </label>
 
-              <FormField label='Twitter URL'>
-                <input type='text' placeholder='Twitter URL' className='w-full rounded border p-2' />
-              </FormField> */}
+                  <textarea
+                    id='description'
+                    name='description'
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={2}
+                    maxLength={300}
+                    placeholder='Full description text'
+                    className='w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
 
-              <div className='flex justify-center gap-4'>
-                <button type='submit' className='rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700'>
-                  Add Article
-                </button>
+                {/* Infographics URL */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>
+                    Infographics URL <span className='text-red-500'>*</span>
+                  </label>
 
-                <button type='reset' className='rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600'>
-                  Reset
-                </button>
-              </div>
-            </form>
+                  <input
+                    type='text'
+                    id='imgUrl'
+                    name='imgUrl'
+                    value={formData.imgUrl}
+                    onChange={handleChange}
+                    placeholder='Image URL'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
+
+                {/* Facebook */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>Facebook</label>
+
+                  <input
+                    type='text'
+                    id='facebook'
+                    name='facebook'
+                    value={formData.facebook}
+                    onChange={handleChange}
+                    placeholder='Facebook'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
+
+                {/* Facebook URL */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>Facebook URL</label>
+
+                  <input
+                    type='text'
+                    id='facebookUrl'
+                    name='facebookUrl'
+                    value={formData.facebookUrl}
+                    onChange={handleChange}
+                    placeholder='Facebook URL'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
+
+                {/* Twitter */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>Twitter</label>
+
+                  <input
+                    type='text'
+                    id='twitter'
+                    name='twitter'
+                    value={formData.twitter}
+                    onChange={handleChange}
+                    placeholder='Twitter'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
+
+                {/* Twitter URL */}
+                <div className='mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]'>
+                  <label className='pt-2 text-sm font-medium text-gray-700'>Twitter URL</label>
+
+                  <input
+                    type='text'
+                    id='twitterUrl'
+                    name='twitterUrl'
+                    value={formData.twitterUrl}
+                    onChange={handleChange}
+                    placeholder='Twitter URL'
+                    className='w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  />
+                </div>
+
+                {/* Validation */}
+                {submitAttempt && (
+                  <div className='mb-4 text-sm text-red-600'>
+                    All fields with an <span className='text-red-500'>*</span> are required.
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className='mt-6 flex justify-center gap-3'>
+                  <button type='submit' className='rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700'>
+                    Add Article
+                  </button>
+
+                  <button
+                    type='button'
+                    onClick={resetForm}
+                    className='rounded bg-gray-500 px-6 py-2 text-sm font-medium text-white hover:bg-gray-600'
+                  >
+                    Reset
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-// type FormFieldProps = {
-//   label: string;
-//   required?: boolean;
-//   children: React.ReactNode;
-// };
-
-// function FormField({
-//   label,
-//   required,
-//   children,
-// }: FormFieldProps) {
-//   return (
-//     <div className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-center">
-//       <label className="text-[12px] font-medium md:col-span-2">
-//         {label}
-//         {required && (
-//           <span className="ml-1 text-red-500">*</span>
-//         )}
-//       </label>
-
-//       <div className="md:col-span-10">{children}</div>
-//     </div>
-//   );
-// }

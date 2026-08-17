@@ -1,7 +1,24 @@
+'use client';
 import Link from 'next/link';
-import { categories } from '../constants/categories';
+import { useEffect, useState } from 'react';
+import { getCategories } from '../lib/categories';
+import { Category } from '@/app/interfaces/category';
 
 export default function SiteMapPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data.filter((item) => item.status === 1));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
   return (
     <div className='flex-1 p-5 px-10'>
       <div className='rounded-lg border border-gray-300 bg-white p-5'>
@@ -29,9 +46,9 @@ export default function SiteMapPage() {
 
             <ul className='mt-2 list-[circle] pl-8 space-y-2'>
               {categories.map((category) => (
-                <li key={category} className='text-black'>
-                  <Link href={`/?category=${encodeURIComponent(category)}`} className='text-blue-500 hover:underline'>
-                    {category}
+                <li key={category.catId} className='text-black'>
+                  <Link href={`/?category=${encodeURIComponent(category.title)}`} className='text-blue-500 hover:underline'>
+                    {category.title}
                   </Link>
                 </li>
               ))}

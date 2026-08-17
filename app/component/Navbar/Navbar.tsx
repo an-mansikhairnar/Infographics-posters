@@ -12,11 +12,32 @@ export default function Navbar() {
   const searchParams = useSearchParams();
   const search = searchParams.get('search');
   const pathname = usePathname();
+  const category = searchParams.get('category');
+  const isInfographicPage = pathname.startsWith('/infographics/');
 
-  const navLinkClass = (path: string) =>
-    `h-full flex items-center px-4 border-b-4 transition-colors ${
-      pathname === path ? 'border-cyan-500 text-cyan-500' : 'border-transparent hover:text-cyan-400'
+  const navLinkClass = (path: string) => {
+    let isActive = pathname === path;
+
+    //Keep activ
+    if (path === '/' && isInfographicPage) {
+      isActive = true;
+    }
+    // When a category is selected from the Site Map,
+    // keep Site Map active instead of Home.
+    if (path === '/site-map' && category) {
+      isActive = true;
+    }
+
+    // Don't highlight Home when a category query is present.
+    if (path === '/' && category) {
+      isActive = false;
+    }
+
+    return `h-full flex items-center px-4 border-b-4 transition-colors ${
+      isActive ? 'border-cyan-500 text-cyan-500' : 'border-transparent hover:text-cyan-400'
     }`;
+  };
+
   return (
     <nav className='bg-gray-800 h-[62px] w-full flex items-center text-white'>
       <div className='flex items-center h-full'>

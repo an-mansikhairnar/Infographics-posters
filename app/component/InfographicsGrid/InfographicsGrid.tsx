@@ -9,7 +9,7 @@ import { LoadingSpinner, useLoading } from '@/app/context/loader';
 import { getCategories } from '@/app/lib/categories';
 import { motion } from 'framer-motion';
 import { useInfiniteScroll } from '@/app/hooks/infinite-scroll';
-// import GoogleAds from '../GoogleAds/GoogleAds';
+
 export default function InfographicsGrid() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [matchedCategoryId, setMatchedCategoryId] = useState<number>();
@@ -17,6 +17,8 @@ export default function InfographicsGrid() {
   const category = searchParams.get('category')?.toLowerCase() ?? '';
   const search = searchParams.get('search')?.toLowerCase() ?? '';
   const { loading, setLoading } = useLoading();
+
+  // Filter articles by the selected category and search query.
   const filteredArticles = articles.filter((item) => {
     const matchesCategory = !category || item.catId === matchedCategoryId;
     const matchesSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
@@ -25,6 +27,7 @@ export default function InfographicsGrid() {
 
   const ordering = searchParams.get('ordering') ?? 'newest';
 
+  // Sort the filtered results by the chosen ordering option.
   const sortedArticles = [...filteredArticles].sort((a, b) => {
     switch (ordering) {
       case 'newest':
@@ -51,8 +54,10 @@ export default function InfographicsGrid() {
     }
   });
 
+  // Use sorted results when a search is active; otherwise keep the filtered list.
   const displayArticles = search ? sortedArticles : filteredArticles;
 
+  // Resolve the selected category ID from the category name.
   useEffect(() => {
     const fetchCategory = async () => {
       try {
@@ -84,9 +89,10 @@ export default function InfographicsGrid() {
 
     fetchArticles();
   }, []);
-
+  // Track how many cards should be shown based on the current scroll position.
   const { visibleCount } = useInfiniteScroll(filteredArticles.length, `${category}|${search}`);
 
+  // Show the loading spinner while the first batch of articles is being fetched.
   if (loading && articles.length === 0) {
     return (
       <section className='flex-1'>
@@ -101,7 +107,7 @@ export default function InfographicsGrid() {
       {search && <SearchFilters />}
 
       {/* <GoogleAds adSlot='9872515270' /> */}
-      <div className={search ? 'grid grid-cols-7 gap-1 xl:w-[90%]' : 'columns-[187px] gap-2 xl:w-[90%]'}>
+      <div className='columns-[187px] gap-2 xl:w-[90%]'>
         {displayArticles.slice(0, visibleCount).map((item) => (
           <div key={item.articleId} className='break-inside-avoid mb-3'>
             <motion.div layout transition={{ duration: 0.5 }}>
@@ -111,9 +117,9 @@ export default function InfographicsGrid() {
         ))}
       </div>
 
-      <LoadingSpinner />
+      {visibleCount < filteredArticles.length && <LoadingSpinner />}
 
-      {search && filteredArticles.length < 6 && (
+      {search && filteredArticles.length < 20 && (
         <div className='bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3'>
           No more infographics to show
         </div>

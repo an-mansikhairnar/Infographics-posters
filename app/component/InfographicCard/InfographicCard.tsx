@@ -24,6 +24,23 @@ export default function InfographicCard({ item }: InfographicCardProps) {
     router.push(`/infographics/${item.alias}.html/${item.articleId}`);
   };
 
+  const getLabel = () => {
+    const today = new Date();
+
+    // Convert to valid ISO format
+    const created = new Date(item.created.replace(' ', 'T').split('.')[0]);
+
+    const diff = Math.abs(created.getTime() - today.getTime());
+
+    const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+    if (diffDays > 0 && diffDays < 7) return 'NEW';
+    if (item.hits > 2000) return 'HOT';
+
+    return '';
+  };
+  const label = getLabel();
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -48,8 +65,7 @@ export default function InfographicCard({ item }: InfographicCardProps) {
           <div className='h-12 w-12 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent' />
         </div>
       )} */}
-
-      <div className='w-[187px] sm:w-[200px] md:w-[220px] lg:w-[200px] bg-white border border-gray-300 rounded-sm overflow-hidden cursor-pointer'>
+      <div className='w-[187px] sm:w-[200px] md:w-[220px] lg:w-[200px] bg-white border border-gray-300 rounded-l cursor-pointer transition-shadow duration-300 hover:shadow-xl'>
         <div className='w-full overflow-hidden flex justify-center p-2'>
           {imageUrl ? (
             <Image src={imageUrl} alt={item.title} width={300} height={500} className='max-w-full h-auto object-contain max-h-[287px]' />
@@ -59,9 +75,16 @@ export default function InfographicCard({ item }: InfographicCardProps) {
         </div>
 
         <div className='px-3 pb-3'>
-          {item.hits > 2000 && (
-            <span className='bg-red-800 text-white font-medium text-[10px] px-3 mr-2 rounded float-left mt-1.5'>HOT</span>
+          {label && (
+            <span
+              className={`text-white font-medium text-[10px] px-3 mr-2 rounded float-left mt-1.5 ${
+                label === 'NEW' ? 'bg-green-500' : 'bg-red-800'
+              }`}
+            >
+              {label}
+            </span>
           )}
+
           <h5 className='text-[18px] font-bold leading-tight hover:text-cyan-600'>{item.title}</h5>
         </div>
 
