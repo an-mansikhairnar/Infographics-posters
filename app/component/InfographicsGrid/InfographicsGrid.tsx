@@ -9,6 +9,7 @@ import { LoadingSpinner, useLoading } from '@/app/context/loader';
 import { getCategories } from '@/app/lib/categories';
 import { motion } from 'framer-motion';
 import { useInfiniteScroll } from '@/app/hooks/infinite-scroll';
+import GoogleAds from '../GoogleAds/GoogleAds';
 
 export default function InfographicsGrid() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -106,13 +107,15 @@ export default function InfographicsGrid() {
     <section className='flex-1 p-5'>
       {search && <SearchFilters />}
 
-      {/* <GoogleAds adSlot='9872515270' /> */}
       <div className='columns-[187px] gap-2 xl:w-[90%]'>
         {displayArticles.slice(0, visibleCount).map((item) => (
           <div key={item.articleId} className='break-inside-avoid mb-3'>
             <motion.div layout transition={{ duration: 0.5 }}>
               <InfographicCard item={item} />
             </motion.div>
+        {displayArticles.indexOf(item) % 20 === 0 && (
+          <GoogleAds adSlot="3319549365" />
+        )}
           </div>
         ))}
       </div>

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Article } from '@/app/interfaces/infographics';
 import { Category } from '@/app/interfaces/category';
 import { LoadingSpinner } from '@/app/context/loader';
-
+import GoogleAds from '../GoogleAds/GoogleAds';
 export default function DetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -43,7 +43,7 @@ export default function DetailPage() {
 
     fetchArticle();
   }, [id]);
-  
+
   useEffect(() => {
     if (!article) return;
 
@@ -78,7 +78,7 @@ export default function DetailPage() {
     ? `<a href="${siteUrl}/${categorySlug}/${article.alias}/${article.articleId}">
          <img src="${siteUrl}/${fullImage}" style="max-width:100%" alt="${article.title}" />
        </a>
-       <p>Filed at Infographicsposters.com in 
+       <p>Filed at Infographicsposters.com in
          <a href="${siteUrl}/${categorySlug}">${categoryName} Infographics</a>
        </p>`
     : '';
@@ -110,6 +110,7 @@ export default function DetailPage() {
 
   return (
     <div className='container mx-5 my-6 rounded border border-gray-300 bg-white p-6'>
+      <GoogleAds adSlot='3319549365' />
       <h1 className='mb-4 mt-15 text-3xl font-bold text-cyan-600'>{article.title}</h1>
 
       <div className='mb-4 flex gap-8 text-sm'>

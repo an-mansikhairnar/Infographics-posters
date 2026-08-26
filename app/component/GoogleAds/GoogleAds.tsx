@@ -1,45 +1,42 @@
-// 'use client';
+'use client';
 
-// import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-// declare global {
-//   interface Window {
-//     adsbygoogle: unknown[];
-//   }
-// }
+declare global {
+	interface Window {
+		adsbygoogle: unknown[];
+	}
+}
 
-// export default function AdBlock() {
-//   useEffect(() => {
-//     try {
-//       (window.adsbygoogle = window.adsbygoogle || []).push({});
-//     } catch (e) {
-//       console.log(e);
-//     }
-//   }, []);
+interface GoogleAdsProps {
+	adSlot: string;
+}
 
-//   return (
-//     <ins
-//       className="adsbygoogle"
-//       style={{ display: 'block', minHeight: 320 }}
-//       data-ad-client="ca-pub-0040821316451996"
-//       data-ad-slot="9872515270"
-//       data-ad-format="auto"
-//       data-full-width-responsive="true"
-//     />
-//   );
-// }
+export default function GoogleAds({ adSlot }: Readonly<GoogleAdsProps>) {
+	const adRef = useRef<HTMLModElement>(null);
 
-// 'use client';
+	useEffect(() => {
+		const ad = adRef.current;
+		if (!ad || ad.dataset.adsbygoogleStatus) return;
 
-// interface AdBannerProps {
-//   adSlot: string;
-// }
+		try {
+			const adsbygoogle = window.adsbygoogle || [];
+			window.adsbygoogle = adsbygoogle;
+			adsbygoogle.push({});
+		} catch (error) {
+			console.error('Failed to initialize Google AdSense:', error);
+		}
+	}, []);
 
-// export default function GoogleAds({ adSlot }: AdBannerProps) {
-//   return (
-//     <div className='mb-4 rounded border border-dashed border-gray-300 bg-gray-50 p-3 text-center text-sm text-gray-600'>
-//       Ad placeholder
-//       <div className='mt-1 text-xs text-gray-400'>Slot: {adSlot}</div>
-//     </div>
-//   );
-// }
+	return (
+		<ins
+			ref={adRef}
+			className='adsbygoogle my-4 block min-h-[100px] overflow-hidden'
+			style={{ display: 'block' }}
+			data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}
+			data-ad-slot={adSlot}
+			data-ad-format='auto'
+			data-full-width-responsive='true'
+		/>
+	);
+}
