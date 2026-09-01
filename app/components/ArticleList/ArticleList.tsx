@@ -14,16 +14,8 @@ import Dialog from '@mui/material/Dialog';
 import { usePagination } from '@/app/hooks/usePagination';
 import Pagination from '@/app/components/Pagination/Pagination';
 import Image from 'next/image';
-import { BASE_URL } from '@/app/lib/constants';
-
-const BootstrapDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialogContent-root': {
-    padding: theme.spacing(2),
-  },
-  '& .MuiDialogActions-root': {
-    padding: theme.spacing(1),
-  },
-}));
+import { toast } from 'react-hot-toast';
+import BootstrapDialog from '@/app/components/BootstrapDialog/BootstrapDialog';
 
 interface ArticleListTableProps {
   onEdit: (id: number) => void;
@@ -39,13 +31,11 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await fetch('/api/add-article', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`, {
           method: 'GET',
         });
 
         const data: Article[] = await response.json();
-        console.log('sample article:', data[0]); // ADD THIS
-
         setArticles(data);
       } catch (error) {
         console.error(error);
@@ -81,7 +71,7 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
     if (articleToDelete === null) return;
 
     try {
-      const response = await fetch(`/api/add-article/${articleToDelete}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles/${articleToDelete}`, {
         method: 'DELETE',
       });
 
@@ -92,11 +82,10 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
       }
 
       setArticles((prev) => prev.filter((article) => article.articleId !== articleToDelete));
-
-      alert(data.message);
+      toast.success('Article deleted successflly');
     } catch (error) {
       console.error(error);
-      alert('Something went wrong');
+      toast.error('Failed to deleted successflly');
     } finally {
       closeConfirmDialog();
     }
@@ -104,7 +93,6 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
 
   return (
     <>
-      {/* <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} /> */}
       <div className='flex items-center justify-between mb-4'>
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
 
@@ -125,7 +113,6 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
             <thead>
               <tr className='bg-white border-b border-slate-200 p-5'>
                 <th className='px-4 py-4 text-left font-bold text-gray-800 border-r border-slate-200'>#ID</th>
-                {/* <th className='px-4 py-4 text-left font-bold text-gray-800 border-r border-slate-200'>Thumb Image</th> */}
                 <th className='px-4 py-4 text-left font-bold text-gray-800 border-r border-slate-200'>Thumb Image</th>
                 <th className='px-4 py-4 text-left font-bold text-gray-800 border-r border-slate-200'>Title</th>
                 <th className='px-4 py-4 text-left font-bold text-gray-800 border-r border-slate-200'>Alias</th>
@@ -139,38 +126,22 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
               {currentItems.map((article) => (
                 <tr key={article.articleId} className='border-b border-slate-200 hover:bg-slate-50'>
                   <td className='px-4 py-3 border-r border-slate-100 align-middle'>{article.articleId}</td>
-                  {/* <td className='px-4 py-3 border-r border-slate-100 align-middle'>
-                  <Image
-                    src={article.fullImageUrl}
-                    alt={article.title}
-                    className='w-16 h-20 object-cover rounded-sm border border-slate-200'
-                  />
-                </td> */}
+
                   <td className='px-4 py-3 border-r border-slate-100 align-middle'>
-                  {/* <Image
-                      src={`${BASE_URL}${article.thumbImageUrl}`}
-                      alt={article.title}
-                      width={80}
-                      height={100}
-                      className='w-20 h-24 rounded border border-slate-200 bg-white'
-                    /> */}
-                  {article.thumbImageUrl ? (
-                    <Image
-                      src={
-                        article.imgPrefix?.includes('localhost')
-                          ? article.thumbImageUrl
-                          : `https://www.infographicsposters.com${article.thumbImageUrl}`
-                      }
-                      alt={article.title}
-                      width={64}
-                      height={80}
-                      className='w-16 h-20 rounded-sm border border-slate-200'
-                    />
-                  ) : (
-                    <div className='w-16 h-20 bg-slate-100 rounded-sm border border-slate-200 flex items-center justify-center text-xs text-slate-400'>
-                      No image
-                    </div>
-                  )}
+                    {article.thumbImageUrl ? (
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_BASE_URL}${article.thumbImageUrl}`
+                        }
+                        alt={article.imageAltText}
+                        width={64}
+                        height={80}
+                        className='w-16 h-20 rounded-sm border border-slate-200'
+                      />
+                    ) : (
+                      <div className='w-16 h-20 bg-slate-100 rounded-sm border border-slate-200 flex items-center justify-center text-xs text-slate-400'>
+                        No image
+                      </div>
+                    )}
                   </td>
                   <td className='px-4 py-3 border-r border-slate-100 align-middle'>{article.title}</td>
                   <td className='px-4 py-3 border-r border-slate-100 align-middle'>{article.alias}</td>

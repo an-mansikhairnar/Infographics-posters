@@ -12,485 +12,456 @@ import { MetaFormData } from '@/app/interfaces/MetaFormData';
 import { SocialFieldsFormData } from '@/app/interfaces/SocialFieldsForm';
 import { UploadImageFormData } from '@/app/interfaces/UploadImageFormData';
 import { toast } from 'react-hot-toast';
+import { COLORS } from '../theme';
 
 interface EmbededCodeData {
-  embedCode: string;
+    embedCode: string;
 }
 
 const articlesFormData: ArticleFormData = {
-  title: '',
-  alias: '',
-  catId: '',
-  featured: '',
-  type: '',
-  status: '',
-  introDescription: '',
-  fullDescription: '',
-  authorEmail: '',
-  paypalId: '',
+    title: '',
+    alias: '',
+    catId: '',
+    featured: '',
+    type: '',
+    status: '',
+    introDescription: '',
+    fullDescription: '',
+    authorEmail: '',
+    paypalId: ''
 };
 
 const metasFormData: MetaFormData = {
-  metaTitle: '',
-  metaKey: '',
-  metaDescription: '',
+    metaTitle: '',
+    metaKey: '',
+    metaDescription: ''
 };
 
 const socialsFieldsFormData: SocialFieldsFormData = {
-  authorUrl: '',
-  author: '',
-  facebook: '',
-  facebookUrl: '',
-  instagram: '',
-  instagramUrl: '',
-  twitter: '',
-  twitterUrl: '',
+    authorUrl: '',
+    author: '',
+    facebook: '',
+    facebookUrl: '',
+    instagram: '',
+    instagramUrl: '',
+    twitter: '',
+    twitterUrl: ''
 };
 
 const uploadImagesFormData: UploadImageFormData = {
-  imgFolder: 'IP4001-IP4500',
-  fullImageUrl: '',
-  thumbImageUrl: '',
-  imageAltText: '',
-  fullImageFile: null,
-  thumbImageFile: null,
+    imgFolder: 'IP4001-IP4500',
+    fullImageUrl: '',
+    thumbImageUrl: '',
+    imageAltText: '',
+    fullImageFile: null,
+    thumbImageFile: null
 };
 
 export default function ArticlePage() {
-  const [open, setOpen] = useState(false);
-  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
-  const [articleFormData, setArticleFormData] = useState<ArticleFormData>(articlesFormData);
-  const [metaFormData, setMetaFormData] = useState<MetaFormData>(metasFormData);
-  const [socialFieldsFormData, setSocialFieldsFormData] = useState<SocialFieldsFormData>(socialsFieldsFormData);
-  const [uploadImageFormData, setUploadImageFormData] = useState<UploadImageFormData>(uploadImagesFormData);
-  const [embededCode, setEmbededCodeData] = useState<EmbededCodeData>({ embedCode: '' });
-  const [refreshArticles, setRefreshArticles] = useState(0);
+    const [open, setOpen] = useState(false);
+    const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+    const [articleFormData, setArticleFormData] = useState<ArticleFormData>(articlesFormData);
+    const [metaFormData, setMetaFormData] = useState<MetaFormData>(metasFormData);
+    const [socialFieldsFormData, setSocialFieldsFormData] = useState<SocialFieldsFormData>(socialsFieldsFormData);
+    const [uploadImageFormData, setUploadImageFormData] = useState<UploadImageFormData>(uploadImagesFormData);
+    const [embededCode, setEmbededCodeData] = useState<EmbededCodeData>({ embedCode: '' });
+    const [refreshArticles, setRefreshArticles] = useState(0);
 
-  const resetForm = () => {
-    setArticleFormData(articlesFormData);
-    setMetaFormData(metasFormData);
-    setSocialFieldsFormData(socialsFieldsFormData);
-    setUploadImageFormData(uploadImagesFormData);
-    setEmbededCodeData({ embedCode: '' });
-  };
+    const resetForm = () => {
+        setArticleFormData(articlesFormData);
+        setMetaFormData(metasFormData);
+        setSocialFieldsFormData(socialsFieldsFormData);
+        setUploadImageFormData(uploadImagesFormData);
+        setEmbededCodeData({ embedCode: '' });
+    };
 
-  const handleOpen = () => {
-    setEditingArticle(null);
-    resetForm();
-    setOpen(true);
-  };
+    const handleOpen = () => {
+        setEditingArticle(null);
+        resetForm();
+        setOpen(true);
+    };
 
-  const handleClose = () => {
-    setOpen(false);
-    setEditingArticle(null);
-    resetForm();
-  };
+    const handleClose = () => {
+        setOpen(false);
+        setEditingArticle(null);
+        resetForm();
+    };
 
+    const formValidation = () => {
+        const isArticleValid =
+            articleFormData.title &&
+            articleFormData.alias &&
+            articleFormData.catId &&
+            articleFormData.featured &&
+            articleFormData.type &&
+            articleFormData.status &&
+            articleFormData.introDescription &&
+            articleFormData.fullDescription &&
+            (articleFormData.type !== 'paid' || articleFormData.authorEmail);
 
-// export default function ArticlePage() {
-//   const [open, setOpen] = useState(false);
-//   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
-//   // const [articleFormData, setArticleFormData] = useState<ArticleFormData>();
-//   const [articleFormData, setArticleFormData] = useState<ArticleFormData>({
-//     title: '',
-//     alias: '',
-//     catId: '',
-//     featured: '',
-//     type: '',
-//     status: '',
-//     introDescription: '',
-//     fullDescription: '',
-//     authorEmail: '',
-//     paypalId: '',
-//   });
-//   const [metaFormData, setMetaFormData] = useState<MetaFormData>({
-//     metaTitle: '',
-//     metaKey: '',
-//     metaDescription: '',
-//   });
-//   const [socialFieldsFormData, setSocialFieldsFormData] = useState<SocialFieldsFormData>({
-//     authorUrl: '',
-//     author: '',
-//     facebook: '',
-//     facebookUrl: '',
-//     instagram: '',
-//     instagramUrl: '',
-//     twitter: '',
-//     twitterUrl: '',
-//   });
-//   const [uploadImageFormData, setUploadImageFormData] = useState<UploadImageFormData>({
-//     imgFolder: 'IP4001-IP4500',
-//     fullImageUrl: '',
-//     thumbImageUrl: '',
-//     imageAltText: '',
-//     fullImageFile: null,
-//     thumbImageFile: null,
-//   });
-//   // const [embededCode, setEmbededCodeData] = useState<EmbededCodeData>();
-  // const [embededCode, setEmbededCodeData] = useState<EmbededCodeData>({ embedCode: '' });
-  // const [refreshArticles, setRefreshArticles] = useState(0);
-
-  // const handleOpen = () => {
-  //   setOpen(true);
-  //   setEditingArticle(null);
-  // };
-  // const handleClose = () => {
-  //   setOpen(false);
-  //     setEditingArticle(null);
-  // }
-  const formValidation = () => {
-    const isArticleValid =
-      articleFormData.title &&
-      articleFormData.alias &&
-      articleFormData.catId &&
-      articleFormData.featured &&
-      articleFormData.type &&
-      articleFormData.status &&
-      articleFormData.introDescription &&
-      articleFormData.fullDescription &&
-      (articleFormData.type !== 'paid' || articleFormData.authorEmail);
-
-    if (!isArticleValid) {
-      toast.error('Please fill all mandatory fields.');
-      return;
-    }
-
-    const isImageValid =
-      uploadImageFormData.imgFolder &&
-      uploadImageFormData.imageAltText &&
-      (uploadImageFormData.fullImageFile || uploadImageFormData.fullImageUrl) &&
-      (uploadImageFormData.thumbImageFile || uploadImageFormData.thumbImageUrl);
-
-    if (!isImageValid) {
-      toast.error('Please fill all mandatory fields.');
-      return;
-    }
-
-    const isSocialValid = socialFieldsFormData.authorUrl;
-
-    if (!isSocialValid) {
-      toast.error('Please fill all mandatory fields.');
-      return;
-    }
-
-    return true;
-  };
-  const handleAdd = async () => {
-    try {
-      if (!formValidation()) {
-        return;
-      }
-      let fullImageUrl = '';
-      let thumbImageUrl = '';
-
-      // Upload Images
-      if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
-        const imageFormData = new FormData();
-
-        imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
-
-        if (uploadImageFormData.fullImageFile) {
-          imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
+        if (!isArticleValid) {
+            toast.error('Please fill all mandatory fields.');
+            return;
         }
 
-        if (uploadImageFormData.thumbImageFile) {
-          imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
+        const isImageValid =
+            uploadImageFormData.imgFolder &&
+            uploadImageFormData.imageAltText &&
+            (uploadImageFormData.fullImageFile || uploadImageFormData.fullImageUrl) &&
+            (uploadImageFormData.thumbImageFile || uploadImageFormData.thumbImageUrl);
+
+        if (!isImageValid) {
+            toast.error('Please fill all mandatory fields.');
+            return;
         }
 
-        const uploadRes = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: imageFormData,
+        const isSocialValid = socialFieldsFormData.authorUrl;
+
+        if (!isSocialValid) {
+            toast.error('Please fill all mandatory fields.');
+            return;
+        }
+
+        return true;
+    };
+    const handleAdd = async () => {
+        try {
+            if (!formValidation()) {
+                return;
+            }
+            let fullImageUrl = '';
+            let thumbImageUrl = '';
+
+            // Upload Images
+            if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
+                const imageFormData = new FormData();
+
+                imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
+
+                if (uploadImageFormData.fullImageFile) {
+                    imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
+                }
+
+                if (uploadImageFormData.thumbImageFile) {
+                    imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
+                }
+
+                const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-image`, {
+                    method: 'POST',
+                    body: imageFormData
+                });
+
+                if (!uploadRes.ok) {
+                    throw new Error('Image upload failed');
+                }
+
+                const uploadData = await uploadRes.json();
+
+                fullImageUrl = uploadData.fullImageUrl || fullImageUrl;
+                thumbImageUrl = uploadData.thumbImageUrl || thumbImageUrl;
+            }
+
+            // Merge all form data
+            const combinedData = {
+                ...articleFormData,
+                ...metaFormData,
+                ...socialFieldsFormData,
+                ...uploadImageFormData,
+                ...embededCode,
+                imageAltText: uploadImageFormData.imageAltText.trim().replace(/\s+/g, '-'),
+                imgPrefix: process.env.NEXT_PUBLIC_BASE_URL,
+                fullImageUrl,
+                thumbImageUrl
+            };
+
+            // Save Article
+            const articleRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(combinedData)
+            });
+
+            const result = await articleRes.json();
+
+            if (!articleRes.ok) {
+                throw new Error(result.message || 'Failed to save article');
+            }
+
+            toast.success('Article added successfully');
+
+            setRefreshArticles((prev) => prev + 1);
+            setOpen(false);
+            setEditingArticle(null);
+        } catch (error) {
+            console.error('handleAdd error:', error);
+            toast.error('Something went wrong');
+        }
+    };
+
+    const patchArticleData = (article: Article) => {
+        // Article Form
+        setArticleFormData({
+            title: article.title ?? '',
+            alias: article.alias ?? '',
+            catId: String(article.catId ?? ''),
+            featured: article.featured === '1' ? 'Yes' : 'No',
+            type: article.type ?? '',
+            status: article.status === 1 ? 'Yes' : 'No',
+            introDescription: article.introDescription ?? '',
+            fullDescription: article.fullDescription ?? '',
+            authorEmail: article.authorEmail ?? '',
+            paypalId: article.paypalId ?? ''
         });
 
-        if (!uploadRes.ok) {
-          throw new Error('Image upload failed');
-        }
-
-        const uploadData = await uploadRes.json();
-
-        fullImageUrl = uploadData.fullImageUrl || '';
-        thumbImageUrl = uploadData.thumbImageUrl || '';
-
-        console.log({ fullImageUrl, thumbImageUrl });
-      }
-
-      // Merge all form data
-      const combinedData = {
-        ...articleFormData,
-        ...metaFormData,
-        ...socialFieldsFormData,
-        ...uploadImageFormData,
-        ...embededCode,
-        imgPrefix: window.location.origin,
-        fullImageUrl,
-        thumbImageUrl,
-      };
-      console.log('🚀 ~ page.tsx:116 ~ handleAdd ~ combinedData:', combinedData);
-
-      // Save Article
-      const articleRes = await fetch('/api/add-article', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(combinedData),
-      });
-
-      const result = await articleRes.json();
-
-      if (!articleRes.ok) {
-        throw new Error(result.message || 'Failed to save article');
-      }
-
-      toast.success('Article added successfully');
-
-      console.log('Article saved successfully', result);
-      setRefreshArticles((prev) => prev + 1);
-      setOpen(false);
-      setEditingArticle(null);
-    } catch (error) {
-      console.error('handleAdd error:', error);
-      toast.error('Something went wrong');
-    }
-  };
-
-  const patchArticleData = (article: Article) => {
-    // Article Form
-    setArticleFormData({
-      title: article.title ?? '',
-      alias: article.alias ?? '',
-      catId: String(article.catId ?? ''),
-      featured: article.featured === '1' ? 'Yes' : 'No',
-      type: article.type ?? '',
-      status: article.status === 1 ? 'Yes' : 'No',
-      introDescription: article.introDescription ?? '',
-      fullDescription: article.fullDescription ?? '',
-      authorEmail: article.authorEmail ?? '',
-      paypalId: article.paypalId ?? '',
-    });
-
-    // Meta Form
-    setMetaFormData({
-      metaTitle: article.metaTitle ?? '',
-      metaKey: article.metaKey ?? '',
-      metaDescription: article.metaDescription ?? '',
-    });
-
-    // Social Form
-    setSocialFieldsFormData({
-      author: article.author ?? '',
-      authorUrl: article.authorUrl ?? '',
-      facebook: article.facebook ?? '',
-      facebookUrl: article.facebookUrl ?? '',
-      instagram: article.instagram ?? '',
-      instagramUrl: article.instagramUrl ?? '',
-      twitter: article.twitter ?? '',
-      twitterUrl: article.twitterUrl ?? '',
-    });
-
-    // Upload Image Form
-    setUploadImageFormData({
-      imgFolder: article.imgFolder ?? '',
-      fullImageUrl: article.fullImageUrl ?? '',
-      thumbImageUrl: article.thumbImageUrl ?? '',
-      imageAltText: article.imageAltText ?? '',
-      fullImageFile: null,
-      thumbImageFile: null,
-    });
-
-    // Embed Code
-    setEmbededCodeData({
-      embedCode: article.embedCode ?? '',
-    });
-  };
-  const handleEditClick = async (id: number) => {
-    try {
-      const response = await fetch(`/api/add-article/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch article');
-      const article: Article = await response.json();
-      patchArticleData(article);
-      setEditingArticle(article);
-      setOpen(true);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!editingArticle) return;
-    try {
-      if (!formValidation()) {
-        return;
-      }
-      let fullImageUrl = uploadImageFormData.fullImageUrl || '';
-    let thumbImageUrl = uploadImageFormData.thumbImageUrl || '';
-
-      // Upload Images
-      if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
-        const imageFormData = new FormData();
-
-        imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
-
-        if (uploadImageFormData.fullImageFile) {
-          imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
-        }
-
-        if (uploadImageFormData.thumbImageFile) {
-          imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
-        }
-
-        const uploadRes = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: imageFormData,
+        // Meta Form
+        setMetaFormData({
+            metaTitle: article.metaTitle ?? '',
+            metaKey: article.metaKey ?? '',
+            metaDescription: article.metaDescription ?? ''
         });
 
-        if (!uploadRes.ok) {
-          throw new Error('Image upload failed');
+        // Social Form
+        setSocialFieldsFormData({
+            author: article.author ?? '',
+            authorUrl: article.authorUrl ?? '',
+            facebook: article.facebook ?? '',
+            facebookUrl: article.facebookUrl ?? '',
+            instagram: article.instagram ?? '',
+            instagramUrl: article.instagramUrl ?? '',
+            twitter: article.twitter ?? '',
+            twitterUrl: article.twitterUrl ?? ''
+        });
+
+        // Upload Image Form
+        setUploadImageFormData({
+            imgFolder: article.imgFolder ?? '',
+            fullImageUrl: article.fullImageUrl ?? '',
+            thumbImageUrl: article.thumbImageUrl ?? '',
+            imageAltText: article.imageAltText ?? '',
+            fullImageFile: null,
+            thumbImageFile: null
+        });
+
+        // Embed Code
+        setEmbededCodeData({
+            embedCode: article.embedCode ?? ''
+        });
+    };
+
+    const handleEditClick = async (id: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles/${id}`);
+
+            if (!response.ok) throw new Error('Failed to fetch article');
+            const article: Article = await response.json();
+            console.log('fullImageUrl:', article.fullImageUrl);
+            console.log('thumbImageUrl:', article.thumbImageUrl);
+            console.log('imgPrefix:', article.imgPrefix);
+            patchArticleData(article);
+            setEditingArticle(article);
+            setOpen(true);
+
+            patchArticleData(article);
+            setEditingArticle(article);
+            setOpen(true);
+        } catch (error) {
+            console.error(error);
         }
+    };
 
-        const uploadData = await uploadRes.json();
+    const handleUpdate = async () => {
+        if (!editingArticle) return;
+        try {
+            if (!formValidation()) {
+                return;
+            }
+            let fullImageUrl = editingArticle.fullImageUrl ?? uploadImageFormData.fullImageUrl ?? '';
+            let thumbImageUrl = editingArticle.thumbImageUrl ?? uploadImageFormData.thumbImageUrl ?? '';
 
-        fullImageUrl = uploadData.fullImageUrl || '';
-        thumbImageUrl = uploadData.thumbImageUrl || '';
+            // Upload Images
+            if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
+                const imageFormData = new FormData();
 
-        console.log({ fullImageUrl, thumbImageUrl });
-      }
-      const combinedData = {
-        ...articleFormData,
-        ...metaFormData,
-        ...socialFieldsFormData,
-        ...uploadImageFormData,
-        ...embededCode,
-        imgPrefix: window.location.origin,
-        fullImageUrl,
-        thumbImageUrl,
-      };
-      console.log('🚀 ~ page.tsx:216 ~ handleUpdate ~ combinedData:', combinedData);
+                imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
 
-      if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
-        if (uploadImageFormData.fullImageFile) imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
-        if (uploadImageFormData.thumbImageFile) imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
+                if (uploadImageFormData.fullImageFile) {
+                    imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
+                }
 
-        const uploadRes = await fetch('/api/upload-image', { method: 'POST', body: imageFormData });
-        if (!uploadRes.ok) throw new Error('Image upload failed');
-      }
+                if (uploadImageFormData.thumbImageFile) {
+                    imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
+                }
 
-      const response = await fetch(`/api/add-article/${editingArticle.articleId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(combinedData),
-      });
+                const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-image`, {
+                    method: 'POST',
+                    body: imageFormData
+                });
 
-      const result = await response.json();
-      console.log('🚀 ~ page.tsx:122 ~ handleUpdate ~ result:', result);
-      if (!response.ok) throw new Error(result.error || 'Update failed');
-      toast.success('Article updated successfully');
+                if (!uploadRes.ok) {
+                    throw new Error('Image upload failed');
+                }
 
-      setRefreshArticles((prev) => prev + 1);
-      setOpen(false);
-      setEditingArticle(null);
-    } catch (error) {
-      console.error('handleUpdate error:', error);
-      toast.error('Something went wrong while updating');
-    }
-  };
+                // const uploadData = await uploadRes.json();
 
-  return (
-    <>
-      <div className='flex justify-between items-center px-2 py-2 border bg-white border-gray-300 rounded-lg shadow-sm'>
-        <h2 className='text-xl font-semibold text-gray-800'>Article List</h2>
-        <button
-          className='bg-[#3f51b5] hover:bg-[#32408f] text-white px-4 py-2 rounded-md transition-colors duration-300'
-          onClick={handleOpen}
-        >
-          Add Article
-        </button>
-      </div>
+                // fullImageUrl = uploadData.fullImageUrl || fullImageUrl;
+                // thumbImageUrl = uploadData.thumbImageUrl || thumbImageUrl;
+                const uploadData = await uploadRes.json();
 
-      <ArticleListTable onEdit={handleEditClick} refreshKey={refreshArticles} />
+                console.log('img path (raw response from /api/upload-image):', uploadData);
 
-      <Dialog open={open} onClose={handleClose} maxWidth='lg' fullWidth scroll='paper'>
-        <DialogTitle sx={{ bgcolor: '#3f51b5', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {editingArticle ? 'Update Article' : 'Add Article'}
-          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+                const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? '';
 
-        <DialogContent dividers>
-          <div className='grid grid-cols-2 gap-6 mt-2'>
-            <div>
-              {/* <AddArticleForm key={editingArticle?.articleId ?? 'new'} onDataChange={setArticleFormData} initialValues={editingArticle} /> */}
-              {/* <SocialFieldsForm onDataChange={setSocialFieldsFormData} /> */}
+                fullImageUrl = uploadData.fullImageUrl ? `${BASE_URL}${uploadData.fullImageUrl}` : fullImageUrl;
 
-              <AddArticleForm
-                key={`article-${editingArticle?.articleId ?? 'new'}`}
-                value={articleFormData}
-                onDataChange={setArticleFormData}
-              />
-              <SocialFieldsForm
-                key={`social-${editingArticle?.articleId ?? 'new'}`}
-                value={socialFieldsFormData}
-                onDataChange={setSocialFieldsFormData}
-              />
+                thumbImageUrl = uploadData.thumbImageUrl ? `${BASE_URL}${uploadData.thumbImageUrl}` : thumbImageUrl;
+
+                console.log('img path (after upload, before combinedData):', { fullImageUrl, thumbImageUrl });
+            }
+
+            const combinedData = {
+                ...articleFormData,
+                ...metaFormData,
+                ...socialFieldsFormData,
+                ...uploadImageFormData,
+                ...embededCode,
+                imageAltText: uploadImageFormData.imageAltText.trim().replace(/\s+/g, '-'),
+                imgPrefix: process.env.NEXT_PUBLIC_BASE_URL,
+                fullImageUrl,
+                thumbImageUrl
+            };
+            console.log('🚀 ~ page.tsx:334 ~ handleUpdate ~ combinedData:', combinedData);
+
+            if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
+                const imageFormData = new FormData();
+                imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
+                if (uploadImageFormData.fullImageFile)
+                    imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
+                if (uploadImageFormData.thumbImageFile)
+                    imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
+
+                const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-image`, {
+                    method: 'POST',
+                    body: imageFormData
+                });
+                if (!uploadRes.ok) throw new Error('Image upload failed');
+            }
+
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/articles/${editingArticle.articleId}`,
+                {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(combinedData)
+                }
+            );
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Update failed');
+            toast.success('Article updated successfully');
+
+            setRefreshArticles((prev) => prev + 1);
+            setOpen(false);
+            setEditingArticle(null);
+        } catch (error) {
+            console.error('handleUpdate error:', error);
+            toast.error('Failed to update article');
+        }
+    };
+
+    return (
+        <>
+            <div className="flex justify-between items-center px-2 py-2 border bg-white border-gray-300 rounded-lg shadow-sm">
+                <h2 className="text-xl font-semibold text-gray-800">Article List</h2>
+
+                <button
+                    className="text-white px-4 py-2 rounded-md transition-colors duration-300"
+                    style={{ backgroundColor: COLORS.primary }}
+                    onClick={handleOpen}
+                >
+                    Add Article
+                </button>
             </div>
-            <div>
-              {/* <UploadImageForm onDataChange={setUploadImageFormData} /> */}
-              {/* <MetaForm onDataChange={setMetaFormData} /> */}
-              <UploadImageForm
-                key={`upload-${editingArticle?.articleId ?? 'new'}`}
-                value={uploadImageFormData}
-                onDataChange={setUploadImageFormData}
-              />
-              <MetaForm key={`meta-${editingArticle?.articleId ?? 'new'}`} value={metaFormData} onDataChange={setMetaFormData} />
-              {/* <MetaForm
-                key={editingArticle?.articleId ?? 'new'}
-                value={{
-                  metaTitle: metaFormData.metaTitle,
-                  metaKey: metaFormData.metaKey,
-                  metaDescription: metaFormData.metaDescription,
-                }}
-                onDataChange={setMetaFormData}
-              /> */}
-            </div>
-          </div>
 
-          <div className='w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'>
-            <div className='bg-[#3f51b5] px-6 py-4'>
-              <h1 className='text-white text-lg text-sm'>Embed Code</h1>
-            </div>
-            <form className='px-6 py-6 space-y-5' onSubmit={(e) => e.preventDefault()}>
-              <input
-                type='text'
-                name='embedCode'
-                placeholder='Embed Code'
-                value={embededCode?.embedCode || ''}
-                onChange={(e) => setEmbededCodeData({ embedCode: e.target.value })}
-                className='w-full rounded-md border border-slate-300 px-4 py-3 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400'
-              />
-            </form>
-          </div>
-        </DialogContent>
+            <ArticleListTable onEdit={handleEditClick} refreshKey={refreshArticles} />
 
-        <DialogActions sx={{ bgcolor: '#3f51b5' }}>
-          <Button
-            variant='contained'
-            sx={{ bgcolor: '#ffffff', color: '#3f51b5', '&:hover': { bgcolor: '#ffffff', color: '#3f51b5' } }}
-            onClick={handleClose}
-          >
-            Close
-          </Button>
-          <Button
-            variant='contained'
-            sx={{ bgcolor: '#ffffff', color: '#3f51b5', '&:hover': { bgcolor: '#ffffff', color: '#3f51b5' } }}
-            onClick={editingArticle ? handleUpdate : handleAdd}
-          >
-            {editingArticle ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
+            <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth scroll="paper">
+                <DialogTitle
+                    sx={{
+                        bgcolor: COLORS.primary,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}
+                    className="!text-white"
+                >
+                    {editingArticle ? 'Update Article' : 'Add Article'}
+
+                    <IconButton onClick={handleClose} className="!text-white">
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent dividers>
+                    <div className="grid grid-cols-2 gap-6 mt-2">
+                        <div>
+                            <AddArticleForm value={articleFormData} onDataChange={setArticleFormData} />
+                            <SocialFieldsForm value={socialFieldsFormData} onDataChange={setSocialFieldsFormData} />
+                        </div>
+                        <div>
+                            <UploadImageForm value={uploadImageFormData} onDataChange={setUploadImageFormData} />
+                            <MetaForm value={metaFormData} onDataChange={setMetaFormData} />
+                        </div>
+                    </div>
+
+                    <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="px-6 py-4" style={{ backgroundColor: COLORS.primary }}>
+                            <h1 className="text-white text-lg text-sm">Embed Code</h1>
+                        </div>
+                        <form className="px-6 py-6 space-y-5" onSubmit={(e) => e.preventDefault()}>
+                            <input
+                                type="text"
+                                name="embedCode"
+                                placeholder="Embed Code"
+                                value={embededCode?.embedCode || ''}
+                                onChange={(e) => setEmbededCodeData({ embedCode: e.target.value })}
+                                className="w-full rounded-md border border-slate-300 px-4 py-3 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
+                            />
+                        </form>
+                    </div>
+                </DialogContent>
+
+                <DialogActions sx={{ bgcolor: COLORS.primary }}>
+                    <Button
+                        variant="contained"
+                        className="!bg-white hover:!bg-white"
+                        sx={{
+                            color: COLORS.primary,
+                            '&:hover': {
+                                color: COLORS.primary
+                            }
+                        }}
+                        onClick={handleClose}
+                    >
+                        Close
+                    </Button>
+
+                    <Button
+                        variant="contained"
+                        className="!bg-white hover:!bg-white"
+                        sx={{
+                            color: COLORS.primary,
+                            '&:hover': {
+                                color: COLORS.primary
+                            }
+                        }}
+                        onClick={editingArticle ? handleUpdate : handleAdd}
+                    >
+                        {editingArticle ? 'Update' : 'Add'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
+    );
 }

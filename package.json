@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 192.168.1.19 --port ${PORT:-8080}",
+    "dev": "next dev -p 9082",
     "build": "next build",
-    "start": "next start --hostname 192.168.1.19 --port ${PORT:-8080}",
+    "start": "next start -p 9082",
     "lint": "eslint"
   },
   "dependencies": {

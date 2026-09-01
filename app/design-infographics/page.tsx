@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import { FiTrash2 } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import { usePagination } from '@/app/hooks/usePagination';
@@ -13,34 +12,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import Typography from '@mui/material/Typography';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
-const BootstrapDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialogContent-root': {
-    padding: theme.spacing(2),
-  },
-  '& .MuiDialogActions-root': {
-    padding: theme.spacing(1),
-  },
-}));
-export default function DesignInfographicsPage() {
-  interface MyInfographic {
-    infoId: number;
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-    infographicTitle: string;
-    infographicDetails: string;
-    category: string;
-    content: string;
-    linkAssets: string;
-    keyPoints: string;
-    colorTheme: string;
-    style: string;
-    examples: string;
-    additionalNotes: string;
-    transactionId: string;
-    created: string;
-  }
+import { MyInfographic } from '../interfaces/DesignInfographics';
+import { toast } from 'react-hot-toast';
+import BootstrapDialog from '@/app/components/BootstrapDialog/BootstrapDialog';
 
+export default function DesignInfographicsPage() {
   const [MyInfographic, setMyInfographics] = useState<MyInfographic[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -60,12 +36,11 @@ export default function DesignInfographicsPage() {
   useEffect(() => {
     const fetchContact = async () => {
       try {
-        const response = await fetch('/api/my-info', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/my-info`, {
           method: 'GET',
         });
 
         const data = await response.json();
-        console.log(data);
         setMyInfographics(data);
       } catch (error) {
         console.error(error);
@@ -92,7 +67,7 @@ export default function DesignInfographicsPage() {
     if (myInfoToDelete === null) return;
 
     try {
-      const response = await fetch(`/api/my-info/${myInfoToDelete}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/my-info/${myInfoToDelete}`, {
         method: 'DELETE',
       });
 
@@ -102,7 +77,7 @@ export default function DesignInfographicsPage() {
         throw new Error(data.error || 'Failed to delete category');
       }
 
-      alert(data.message);
+      toast.success('Infographics deleted successfully');
 
       // Remove deleted category from table
       setMyInfographics((prev) => prev.filter((myInfo) => myInfo.infoId !== myInfoToDelete));
@@ -110,7 +85,7 @@ export default function DesignInfographicsPage() {
       closeConfirmDialog();
     } catch (error) {
       console.error(error);
-      alert('Something went wrong');
+      toast.error('Failed to deleted Infographics');
     }
   };
 

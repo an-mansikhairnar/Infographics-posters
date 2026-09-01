@@ -7,6 +7,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton }
 import CloseIcon from '@mui/icons-material/Close';
 import CategoryList from '../components/CategoryList/CategoryList';
 import { toast } from 'react-hot-toast';
+import { COLORS } from '../theme';
 
 function RadioGroupField({
   name,
@@ -23,7 +24,7 @@ function RadioGroupField({
     <div className='flex items-center gap-6'>
       {options.map((opt) => (
         <label key={opt} className='flex items-center gap-2 cursor-pointer'>
-          <input type='radio' name={name} value={opt} checked={value === opt} onChange={onChange} className='accent-[#3f51b5]' />
+          <input type='radio' name={name} value={opt} checked={value === opt} onChange={onChange} style={{ accentColor: COLORS.primary }} />
           {opt}
         </label>
       ))}
@@ -69,7 +70,7 @@ export default function CategoryPage() {
 
   const handleEdit = async (id: number) => {
     try {
-      const response = await fetch(`/api/categories/${id}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories/${id}`);
       const data = await response.json();
 
       setEditId(id);
@@ -131,7 +132,7 @@ export default function CategoryPage() {
         ...formData,
       };
 
-      const response = await fetch(`/api/categories`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(combinedData),
@@ -151,7 +152,6 @@ export default function CategoryPage() {
         metaKey: '',
         metaDescription: '',
       });
-      console.log('combinedData', combinedData);
     } catch (error) {
       console.error('handleUpdate error:', error);
       toast.error('Failed to add category');
@@ -164,7 +164,7 @@ export default function CategoryPage() {
     try {
       const combinedData = { ...formData };
 
-      const response = await fetch(`/api/categories/${editId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories/${editId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(combinedData),
@@ -192,120 +192,158 @@ export default function CategoryPage() {
   };
   return (
     <>
-      <div className='flex justify-between items-center px-2 py-2 border bg-white border-gray-300 rounded-lg shadow-sm'>
-        <h2 className='text-xl font-semibold text-gray-800'>Category-list</h2>
-        <button
-          className='bg-[#3f51b5] hover:bg-[#32408f] text-white px-4 py-2 rounded-md transition-colors duration-300 text-sm'
-          onClick={handleOpen}
-        >
-          {editId ? 'Update Category' : 'Add Category'}
-        </button>
-      </div>
+      <>
+        <div className='flex justify-between items-center px-2 py-2 border bg-white border-gray-300 rounded-lg shadow-sm'>
+          <h2 className='text-xl font-semibold text-gray-800'>Category-list</h2>
 
-      {/* <CategoryList /> */}
-      <CategoryList onEdit={handleEdit} refreshKey={refreshCategory} />
-      <Dialog open={open} onClose={handleClose} maxWidth='lg' fullWidth scroll='paper'>
-        <DialogTitle sx={{ bgcolor: '#3f51b5', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Add Category
-          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+          <button
+            className='text-white px-4 py-2 rounded-md transition-colors duration-300 text-sm'
+            style={{
+              backgroundColor: COLORS.primary,
+            }}
+            onClick={handleOpen}
+          >
+            Add Category
+          </button>
+        </div>
 
-        <DialogContent dividers>
-          <div className='grid grid-cols-2 gap-6 mt-2'>
-            {/* Left Side */}
-            <div className='w-full max-w-xl bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'>
-              <div className='bg-[#3f51b5] px-6 py-3'>
-                <h1 className='text-white text-lg text-sm'>Add Category</h1>
+        <CategoryList onEdit={handleEdit} refreshKey={refreshCategory} />
+
+        <Dialog open={open} onClose={handleClose} maxWidth='lg' fullWidth scroll='paper'>
+          <DialogTitle
+            sx={{
+              bgcolor: COLORS.primary,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+            className='!text-white'
+          >
+            {editId ? 'Update Category' : 'Add Category'}
+
+            <IconButton onClick={handleClose} className='!text-white'>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers>
+            <div className='grid grid-cols-2 gap-6 mt-2'>
+              {/* Left Side */}
+              <div className='w-full max-w-xl bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'>
+                <div
+                  className='px-6 py-3'
+                  style={{
+                    backgroundColor: COLORS.primary,
+                  }}
+                >
+                  <h1 className='text-sm text-white'>{editId ? 'Update Category' : 'Add Category'}</h1>
+                </div>
+
+                <form className='px-6 py-6 space-y-5' onSubmit={handleSubmit}>
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>
+                      Title <span className='text-red-600'>*</span>
+                    </label>
+
+                    <input
+                      type='text'
+                      name='title'
+                      placeholder='Title'
+                      value={formData.title}
+                      onChange={handleTitleChange}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>
+                      Alias <span className='text-red-600'>*</span>
+                    </label>
+
+                    <input
+                      type='text'
+                      name='alias'
+                      placeholder='Alias'
+                      value={formData.alias}
+                      onChange={handleChange}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className='flex items-center gap-6'>
+                    <label className='text-sm'>
+                      Status <span className='text-red-600'>*</span>:
+                    </label>
+
+                    <RadioGroupField
+                      name='status'
+                      options={['Yes', 'No']}
+                      value={formData.status === null ? '' : formData.status === 1 ? 'Yes' : 'No'}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          status: e.target.value === 'Yes' ? 1 : 0,
+                        }))
+                      }
+                    />
+                  </div>
+                </form>
               </div>
 
-              <form className='px-6 py-6 space-y-5' onSubmit={handleSubmit}>
-                <div>
-                  <label className='mb-2 block text-sm font-medium text-gray-700'>
-                    Title <span className='text-red-500'>*</span>
-                  </label>
-                  <input
-                    type='text'
-                    name='title'
-                    placeholder='Title'
-                    value={formData.title}
-                    onChange={handleTitleChange}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className='mb-2 block text-sm font-medium text-gray-700'>
-                    Alias <span className='text-red-500'>*</span>
-                  </label>
-                  <input
-                    type='text'
-                    name='alias'
-                    placeholder='Alias'
-                    value={formData.alias}
-                    onChange={handleChange}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className='flex items-center gap-6'>
-                  <label className='text-sm'>
-                    Status <span className='text-red-500'>*</span>:
-                  </label>
-
-                  <RadioGroupField
-                    name='status'
-                    options={['Yes', 'No']}
-                    value={formData.status === null ? '' : formData.status === 1 ? 'Yes' : 'No'}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        status: e.target.value === 'Yes' ? 1 : 0,
-                      }))
-                    }
-                  />
-                </div>
-              </form>
+              {/* Right Side */}
+              <div>
+                <MetaForm
+                  value={{
+                    metaTitle: formData.metaTitle,
+                    metaKey: formData.metaKey,
+                    metaDescription: formData.metaDescription,
+                  }}
+                  onDataChange={(metaData) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      ...metaData,
+                    }))
+                  }
+                />
+              </div>
             </div>
+          </DialogContent>
 
-            {/* Right Side */}
-            <div>
-              {/* <MetaForm value={formData} onDataChange={setFormData} />{' '} */}
-              <MetaForm
-                value={{
-                  metaTitle: formData.metaTitle,
-                  metaKey: formData.metaKey,
-                  metaDescription: formData.metaDescription,
-                }}
-                onDataChange={(metaData) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    ...metaData,
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </DialogContent>
-        <DialogActions sx={{ bgcolor: '#3f51b5' }}>
-          <Button
-            variant='contained'
-            sx={{ bgcolor: '#ffffff', color: '#3f51b5', '&:hover': { bgcolor: '#ffffff', color: '#3f51b5' } }}
-            onClick={handleClose}
+          <DialogActions
+            sx={{
+              bgcolor: COLORS.primary,
+            }}
           >
-            Close
-          </Button>
+            <Button
+              variant='contained'
+              sx={{
+                color: COLORS.primary,
+                '&:hover': {
+                  color: COLORS.primary,
+                },
+              }}
+              className='!bg-white hover:!bg-white'
+              onClick={handleClose}
+            >
+              Close
+            </Button>
 
-          <Button
-            variant='contained'
-            sx={{ bgcolor: '#ffffff', color: '#3f51b5', '&:hover': { bgcolor: '#ffffff', color: '#3f51b5' } }}
-            onClick={editId ? handleUpdate : handleAdd}
-          >
-            {editId ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Button
+              variant='contained'
+              sx={{
+                color: COLORS.primary,
+                '&:hover': {
+                  color: COLORS.primary,
+                },
+              }}
+              className='!bg-white hover:!bg-white'
+              onClick={editId ? handleUpdate : handleAdd}
+            >
+              {editId ? 'Update' : 'Add'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </>
     </>
   );
 }

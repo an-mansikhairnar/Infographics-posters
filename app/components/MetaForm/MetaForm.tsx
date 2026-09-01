@@ -1,5 +1,6 @@
 'use client';
 import { MetaFormData } from '@/app/interfaces/MetaFormData';
+import { COLORS } from '@/app/theme';
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 
@@ -18,9 +19,7 @@ export default function MetaForm({ value, onDataChange, onSubmit }: MetaFormProp
   //   metaKey: '',
   //   metaDescription: '',
   // });
-const [formData, setFormData] = useState<MetaFormData>(
-  value ?? { metaTitle: '', metaKey: '', metaDescription: '' }
-);
+  const [formData, setFormData] = useState<MetaFormData>(value ?? { metaTitle: '', metaKey: '', metaDescription: '' });
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     const nextFormData = {
@@ -39,7 +38,8 @@ const [formData, setFormData] = useState<MetaFormData>(
 
   return (
     <div className='w-full max-w-xl bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'>
-      <div className='bg-[#3f51b5] px-6 py-4'>
+      <div className='px-6 py-4' style={{ backgroundColor: COLORS.primary }}>
+        {' '}
         <h1 className='text-white text-lg text-sm'>MetaData Option</h1>
       </div>
       <form className='px-6 py-6 space-y-5' onSubmit={handleSubmit}>
