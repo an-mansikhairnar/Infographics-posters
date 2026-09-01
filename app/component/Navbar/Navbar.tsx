@@ -63,9 +63,9 @@ export default function Navbar() {
       </div>
 
       <div className='flex items-center ml-auto mr-4 gap-3'>
-        <Link className='bg-cyan-500 text-white hover:bg-cyan-600 rounded-full px-12 py-2 text-[14px]' href='/design-my-infographic'>
+        {/* <Link className='bg-cyan-500 text-white hover:bg-cyan-600 rounded-full px-12 py-2 text-[14px]' href='/design-my-infographic'>
           Design My Infographic
-        </Link>
+        </Link> */}
         {!search && (
           <div className='relative'>
             <FiSearch size={18} className='absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer' onClick={handleSearch} />

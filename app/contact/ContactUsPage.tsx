@@ -35,7 +35,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   setSubmitAttempt(false);
 
   try {
-    const response = await fetch('/api/mail', {
+    const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/mail', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

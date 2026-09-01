@@ -6,127 +6,131 @@ import SearchFilters from '../SearchFilters/SearchFilters';
 import { useEffect, useState } from 'react';
 import { Article } from '@/app/interfaces/infographics';
 import { LoadingSpinner, useLoading } from '@/app/context/loader';
-import { getCategories } from '@/app/lib/categories';
 import { motion } from 'framer-motion';
 import { useInfiniteScroll } from '@/app/hooks/infinite-scroll';
 import GoogleAds from '../GoogleAds/GoogleAds';
+import { Category } from '@/app/interfaces/category';
 
 export default function InfographicsGrid() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [matchedCategoryId, setMatchedCategoryId] = useState<number>();
-  const searchParams = useSearchParams();
-  const category = searchParams.get('category')?.toLowerCase() ?? '';
-  const search = searchParams.get('search')?.toLowerCase() ?? '';
-  const { loading, setLoading } = useLoading();
+    const [articles, setArticles] = useState<Article[]>([]);
+    const [matchedCategoryId, setMatchedCategoryId] = useState<number>();
+    const searchParams = useSearchParams();
+    const category = searchParams.get('category')?.toLowerCase() ?? '';
+    const search = searchParams.get('search')?.toLowerCase() ?? '';
+    const { loading, setLoading } = useLoading();
 
-  // Filter articles by the selected category and search query.
-  const filteredArticles = articles.filter((item) => {
-    const matchesCategory = !category || item.catId === matchedCategoryId;
-    const matchesSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+    // Filter articles by the selected category and search query.
+    const filteredArticles = articles.filter((item) => {
+        const matchesCategory = !category || item.catId === matchedCategoryId;
+        const matchesSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
-  const ordering = searchParams.get('ordering') ?? 'newest';
+    const ordering = searchParams.get('ordering') ?? 'newest';
 
-  // Sort the filtered results by the chosen ordering option.
-  const sortedArticles = [...filteredArticles].sort((a, b) => {
-    switch (ordering) {
-      case 'newest':
-        return new Date(b.created).getTime() - new Date(a.created).getTime();
+    // Sort the filtered results by the chosen ordering option.
+    const sortedArticles = [...filteredArticles].sort((a, b) => {
+        switch (ordering) {
+            case 'newest':
+                return new Date(b.created).getTime() - new Date(a.created).getTime();
 
-      case 'alphabetical':
-        return a.title.localeCompare(b.title);
+            case 'alphabetical':
+                return a.title.localeCompare(b.title);
 
-      case 'oldest':
-        return new Date(a.created).getTime() - new Date(b.created).getTime();
+            case 'oldest':
+                return new Date(a.created).getTime() - new Date(b.created).getTime();
 
-      case 'popular':
-      default:
-        // HOT cards first
-        const aHot = a.hits > 2000;
-        const bHot = b.hits > 2000;
+            case 'popular':
+            default:
+                // HOT cards first
+                const aHot = a.hits > 2000;
+                const bHot = b.hits > 2000;
 
-        // HOT cards first
-        if (aHot !== bHot) {
-          return Number(bHot) - Number(aHot);
+                // HOT cards first
+                if (aHot !== bHot) {
+                    return Number(bHot) - Number(aHot);
+                }
+
+                return 0;
         }
+    });
 
-        return 0;
+    // Use sorted results when a search is active; otherwise keep the filtered list.
+    const displayArticles = search ? sortedArticles : filteredArticles;
+
+    // Resolve the selected category ID from the category name.
+    useEffect(() => {
+        const fetchCategory = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infographics`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch categories');
+                }
+
+                const categories: Category[] = await response.json();
+                const matched = categories.find((item) => item.title.toLowerCase() === category);
+                setMatchedCategoryId(matched?.catId);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchCategory();
+    }, [category]);
+
+    useEffect(() => {
+        const fetchArticles = async () => {
+            setLoading(true);
+
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`);
+                const data = await response.json();
+
+                setArticles(data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchArticles();
+    }, []);
+    // Track how many cards should be shown based on the current scroll position.
+    const { visibleCount } = useInfiniteScroll(filteredArticles.length, `${category}|${search}`);
+
+    // Show the loading spinner while the first batch of articles is being fetched.
+    if (loading && articles.length === 0) {
+        return (
+            <section className="flex-1">
+                <div className="flex min-h-[70vh] items-start justify-center pt-8">
+                    <LoadingSpinner />
+                </div>
+            </section>
+        );
     }
-  });
-
-  // Use sorted results when a search is active; otherwise keep the filtered list.
-  const displayArticles = search ? sortedArticles : filteredArticles;
-
-  // Resolve the selected category ID from the category name.
-  useEffect(() => {
-    const fetchCategory = async () => {
-      try {
-        const categories = await getCategories();
-        const matched = categories.find((item) => item.title.toLowerCase() === category);
-        setMatchedCategoryId(matched?.catId);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchCategory();
-  }, [category]);
-
-  useEffect(() => {
-    const fetchArticles = async () => {
-      setLoading(true);
-
-      try {
-        const response = await fetch('/api/articles');
-        const data = await response.json();
-
-        setArticles(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticles();
-  }, []);
-  // Track how many cards should be shown based on the current scroll position.
-  const { visibleCount } = useInfiniteScroll(filteredArticles.length, `${category}|${search}`);
-
-  // Show the loading spinner while the first batch of articles is being fetched.
-  if (loading && articles.length === 0) {
     return (
-      <section className='flex-1'>
-        <div className='flex min-h-[70vh] items-start justify-center pt-8'>
-          <LoadingSpinner />
-        </div>
-      </section>
+        <section className="flex-1 p-5">
+            {search && <SearchFilters />}
+
+            <div className="columns-[187px] gap-2 xl:w-[90%]">
+                {displayArticles.slice(0, visibleCount).map((item) => (
+                    <div key={item.articleId} className="break-inside-avoid mb-3">
+                        <motion.div layout transition={{ duration: 0.5 }}>
+                            <InfographicCard item={item} />
+                        </motion.div>
+                        {displayArticles.indexOf(item) % 20 === 0 && <GoogleAds adSlot="3319549365" />}
+                    </div>
+                ))}
+            </div>
+
+            {visibleCount < filteredArticles.length && <LoadingSpinner />}
+
+            {search && filteredArticles.length < 20 && (
+                <div className="bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3">
+                    No more infographics to show
+                </div>
+            )}
+        </section>
     );
-  }
-  return (
-    <section className='flex-1 p-5'>
-      {search && <SearchFilters />}
-
-      <div className='columns-[187px] gap-2 xl:w-[90%]'>
-        {displayArticles.slice(0, visibleCount).map((item) => (
-          <div key={item.articleId} className='break-inside-avoid mb-3'>
-            <motion.div layout transition={{ duration: 0.5 }}>
-              <InfographicCard item={item} />
-            </motion.div>
-        {displayArticles.indexOf(item) % 20 === 0 && (
-          <GoogleAds adSlot="3319549365" />
-        )}
-          </div>
-        ))}
-      </div>
-
-      {visibleCount < filteredArticles.length && <LoadingSpinner />}
-
-      {search && filteredArticles.length < 20 && (
-        <div className='bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3'>
-          No more infographics to show
-        </div>
-      )}
-    </section>
-  );
 }

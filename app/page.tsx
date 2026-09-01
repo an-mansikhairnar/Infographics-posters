@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import InfographicsGrid from './component/InfographicsGrid/InfographicsGrid';
-import { db } from '@/app/lib/db';
 import { Category } from '@/app/interfaces/category';
 import { siteMetadata, siteOpenGraph } from './constants/metadata';
 
@@ -11,26 +10,29 @@ export async function generateMetadata({
   searchParams: Promise<{ category?: string; search?: string }>;
 }): Promise<Metadata> {
   const params = await searchParams;
-  const selectedCategory = params.category ? decodeURIComponent(params.category) : '';
 
-  if (selectedCategory) {
-    const [rows] = await db.query('SELECT * FROM category WHERE title = ? LIMIT 1', [selectedCategory]);
-    const category = (rows as Category[])[0];
+  const category = params.category
+    ? decodeURIComponent(params.category)
+    : '';
 
-    if (category) {
+  if (category) {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/category-meta?category=${encodeURIComponent(category)}`);
+
+    if (response.ok) {
+      const data = await response.json();
+
       return {
         ...siteOpenGraph,
-        title: category.metaTitle || `${category.title}`,
-        description:
-          category.metaDescription || `Browse ${category.title} infographics and posters from Infographics Posters.`,
-        keywords: category.metaKey || `${category.title}, infographics, infographic posters`,
+        title: data.metadata.title,
+        description: data.metadata.description,
+        keywords: data.metadata.keywords,
         authors: [{ name: siteMetadata.author }],
         openGraph: {
-          title: category.metaTitle || `${category.title} Infographics`,
-          description:siteMetadata.defaultDescription,
+          ...siteOpenGraph,
+          title: data.metadata.title,
+          description: data.metadata.description,
           url: siteMetadata.siteUrl,
           images: [siteMetadata.ogImage],
-
         },
       };
     }
@@ -40,7 +42,8 @@ export async function generateMetadata({
     title: 'Infographics Posters',
     description:
       'Extensive selection of well-designed infographics posters based on various topics from fashion, politics, entertainment, health, business to technology and others',
-    keywords: 'infographics, infographics posters, information graphics, submit infographics',
+    keywords:
+      'infographics, infographics posters, information graphics, submit infographics',
     authors: [{ name: siteMetadata.author }],
     openGraph: {
       ...siteOpenGraph,
@@ -48,10 +51,10 @@ export async function generateMetadata({
       description: siteMetadata.defaultDescription,
       url: siteMetadata.siteUrl,
       images: [siteMetadata.ogImage],
-
     },
   };
 }
+
 
 export default function Home() {
   return (

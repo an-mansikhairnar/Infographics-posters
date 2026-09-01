@@ -22,7 +22,7 @@ export default function DetailPage() {
       setLoading(true);
 
       try {
-        const res = await fetch(`/api/articles/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles/${id}`);
 
         if (!res.ok) {
           throw new Error('Failed to fetch article');
@@ -49,7 +49,7 @@ export default function DetailPage() {
 
     const fetchCategory = async () => {
       try {
-        const res = await fetch('/api/infographics');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infographics`);
 
         if (!res.ok) {
           throw new Error('Failed to fetch categories');
