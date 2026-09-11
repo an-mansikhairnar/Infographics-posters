@@ -124,7 +124,7 @@ export default function SubmitInfographics() {
 
             console.log('Sending payload:', payload);
 
-            const response = await fetch(`${process.env.API_URL}/api/articles`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

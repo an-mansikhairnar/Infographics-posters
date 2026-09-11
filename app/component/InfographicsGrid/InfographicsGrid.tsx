@@ -126,6 +126,12 @@ export default function InfographicsGrid() {
 
             {visibleCount < filteredArticles.length && <LoadingSpinner />}
 
+            {(category && filteredArticles.length === 0) && (
+                <div className="bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3">
+                    No more infographics to show
+                </div>
+            )}
+
             {search && filteredArticles.length < 20 && (
                 <div className="bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3">
                     No more infographics to show

@@ -7,6 +7,8 @@ import { Article } from '@/app/interfaces/infographics';
 import { Category } from '@/app/interfaces/category';
 import { LoadingSpinner } from '@/app/context/loader';
 import GoogleAds from '../GoogleAds/GoogleAds';
+import { buildAbsoluteImageUrl, getPublicOrigin } from '@/app/utils/imageUrl';
+
 export default function DetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -70,19 +72,19 @@ export default function DetailPage() {
 
   const categorySlug = categoryName.toLowerCase();
 
-  const fullImage = article?.fullImageUrl?.startsWith('/') ? article.fullImageUrl.slice(1) : article?.fullImageUrl;
+  const fullImage = article?.fullImageUrl ? buildAbsoluteImageUrl(article.fullImageUrl, article.imgPrefix || undefined) : '';
 
-  const siteUrl = process.env.SITE_URL;
+  const siteUrl = getPublicOrigin();
 
   const embedCode = article
     ? `<a href="${siteUrl}/${categorySlug}/${article.alias}/${article.articleId}">
-         <img src="${siteUrl}/${fullImage}" style="max-width:100%" alt="${article.title}" />
+         <img src="${fullImage}" style="max-width:100%" alt="${article.title}" />
        </a>
        <p>Filed at Infographicsposters.com in
          <a href="${siteUrl}/${categorySlug}">${categoryName} Infographics</a>
        </p>`
     : '';
-  const imageUrl = `${article?.imgPrefix.replace(/\/$/, '')}/${article?.fullImageUrl.replace(/^\//, '')}`;
+  const imageUrl = buildAbsoluteImageUrl(article?.fullImageUrl || article?.thumbImageUrl, article?.imgPrefix || undefined);
 
   const handleCopy = async () => {
     try {
@@ -135,12 +137,11 @@ export default function DetailPage() {
       <div className='flex flex-col flex-1 px-4 py-3 text-gray-700'>
         <div className='py-6 text-center'>
           <a href={imageUrl}>
-            <Image
+            <img
               src={imageUrl}
-              alt={article.imageAltText}
+              alt={article.imageAltText || article.title}
               width={633}
               height={900}
-              sizes='(max-width: 768px) 100vw, 633px'
               className='max-w-full h-auto object-contain rounded mx-auto'
             />
           </a>

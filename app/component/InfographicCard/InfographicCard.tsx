@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { InfographicCardProps } from '@/app/interfaces/infographics';
 import { Category } from '@/app/interfaces/category';
+import { buildAbsoluteImageUrl } from '@/app/utils/imageUrl';
 
 export default function InfographicCard({ item }: InfographicCardProps) {
     const [categoryName, setCategoryName] = useState('');
@@ -61,13 +62,7 @@ export default function InfographicCard({ item }: InfographicCardProps) {
         fetchCategories();
     }, [item.catId]);
 
-    // const imageUrl =
-    //     item.imgPrefix && item.thumbImageUrl
-    //         ? `${item.imgPrefix.replace(/\/$/, '')}/${item.thumbImageUrl.replace(/^\//, '')}`
-    //         : null;
-    // const imageUrl = `${process.env.NEXT_PUBLIC_API_URL}${item.fullImageUrl}`;
-
-    const imageUrl = `${process.env.NEXT_PUBLIC_IMAGE_PREFIX_URL}${item.thumbImageUrl.startsWith('/') ? '' : '/'}${item.thumbImageUrl}`;
+    const imageUrl = buildAbsoluteImageUrl(item.thumbImageUrl || item.fullImageUrl, item.imgPrefix || undefined);
     return (
         <>
             {/* {loading && (

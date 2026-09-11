@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import DetailPage from '@/app/component/DetailPage/DetailPage';
 import { Article } from '@/app/interfaces/infographics';
 import { siteMetadata, siteOpenGraph } from '@/app/constants/metadata';
+import { buildAbsoluteImageUrl, getPublicOrigin } from '@/app/utils/imageUrl';
 
 type PageProps = {
   params: Promise<{ slug: string; id: string }>;
@@ -42,9 +43,7 @@ export async function generateMetadata({
 
   const shortDescription = description.slice(0, 160);
 
-  const ogImage = article.fullImageUrl
-    ? article.fullImageUrl
-    : siteMetadata.ogImage;
+  const ogImage = buildAbsoluteImageUrl(article.fullImageUrl || article.thumbImageUrl, article.imgPrefix || getPublicOrigin());
 
   return {
     title: article.title,

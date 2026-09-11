@@ -3,7 +3,7 @@ export const siteMetadata = {
     'Infographics posters | Collection of Unique and Creative Infographics!',
   siteUrl: 'https://www.infographicsposters.com/',
   ogImage:
-    'https://www.infographicsposters.com/plugins/content/fb_tw_plus1/linkcmp.png',
+    'https://www.infographicsposters.com/assets/icons/favicon-32x32.png',
   locale: 'en_GB',
   type: 'website' as const,
   author: 'Super User',

@@ -14,75 +14,96 @@ export default function ContactUsPage() {
 
   const [form, setForm] = useState(initialForm);
   const [submitAttempt, setSubmitAttempt] = useState(false);
+  const [emailError, setEmailError] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA | null>(null);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (
-    !form.fullname ||
-    !form.email ||
-    !form.subject ||
-    !form.message
-     || !captchaToken
-  ) {
-    setSubmitAttempt(true);
-    return;
-  }
-
-  setSubmitAttempt(false);
-
-  try {
-    const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/mail', {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: form.fullname,
-        email: form.email,
-        subject: form.subject,
-        message: form.message,
-        sendcopy: form.sendcopy === 1,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to send your message.");
+    // Required field validation
+    if (
+      !form.fullname ||
+      !form.email ||
+      !form.subject ||
+      !form.message ||
+      !captchaToken
+    ) {
+      setSubmitAttempt(true);
+      return;
     }
 
-    alert("Email sent successfully");
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    setForm(initialForm);
-    setCaptchaToken(null);
-    recaptchaRef.current?.reset();
+    if (!emailRegex.test(form.email)) {
+      setEmailError(true);
+      return;
+    }
 
-  } catch (err) {
-    console.error("Email error:", err);
+    setSubmitAttempt(false);
+    setEmailError(false);
 
-    alert(
-      err instanceof Error
-        ? err.message
-        : "Failed to send your message."
-    );
-  }
-};
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/mail`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: form.fullname,
+            email: form.email,
+            subject: form.subject,
+            message: form.message,
+            sendcopy: form.sendcopy === 1,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send your message.');
+      }
+
+      alert('Email sent successfully');
+
+      setForm(initialForm);
+      setCaptchaToken(null);
+      setEmailError(false);
+      recaptchaRef.current?.reset();
+    } catch (err) {
+      console.error('Email error:', err);
+
+      alert(
+        err instanceof Error
+          ? err.message
+          : 'Failed to send your message.'
+      );
+    }
+  };
+
   return (
     <div className='flex-1 p-5'>
       <div className='rounded border border-gray-300 bg-white p-5'>
         <h1 className='mb-2 text-2xl font-bold text-sky-500'>Contact</h1>
 
         <p className='mb-8 text-[12px] font-semibold text-black'>
-          Send an email. All fields with <span className='text-red-500'>*</span> are required.
+          Send an email. All fields with{' '}
+          <span className='text-red-500'>*</span> are required.
         </p>
 
         {submitAttempt && (
           <div className='text-[12px] text-red-600'>
             All fields with <span>*</span> are required.
+          </div>
+        )}
+
+        {emailError && (
+          <div className='text-[12px] text-red-600'>
+            Please enter a valid email address.
           </div>
         )}
 
@@ -103,6 +124,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     fullname: e.target.value,
                   });
                   setSubmitAttempt(false);
+                  setEmailError(false);
                 }}
                 className='h-11 w-full rounded border border-gray-300 px-3 focus:border-sky-500 focus:outline-none'
               />
@@ -125,6 +147,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     email: e.target.value,
                   });
                   setSubmitAttempt(false);
+                  setEmailError(false);
                 }}
                 className='h-11 w-full rounded border border-gray-300 px-3 focus:border-sky-500 focus:outline-none'
               />
@@ -217,7 +240,10 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
           </div>
 
-          <button type='submit' className='rounded-l bg-red-600 px-2 py-2 text-[14px] text-white hover:bg-red-700 font-semibold'>
+          <button
+            type='submit'
+            className='rounded-l bg-red-600 px-2 py-2 text-[14px] font-semibold text-white hover:bg-red-700'
+          >
             Send Email
           </button>
         </form>

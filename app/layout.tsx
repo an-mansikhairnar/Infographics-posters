@@ -11,9 +11,15 @@ import { siteMetadata, siteOpenGraph } from './constants/metadata';
 
 export const viewport: Viewport = {
   themeColor: '#1976d2',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteMetadata.siteUrl),
   title: 'Infographics Posters',
   description:
     'Extensive selection of well-designed infographics posters based on various topics from fashion, politics, entertainment, health, business to technology and others',
@@ -25,12 +31,6 @@ export const metadata: Metadata = {
       siteMetadata.defaultDescription,
     url: siteMetadata.siteUrl,
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   other: {
     'fb:app_id': '412331035483201',
     'my:fb': 'on',
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
     'my:in': 'on',
     'my:pint': 'on',
     HandheldFriendly: 'true',
-    'apple-touch-fullscreen': 'YES',
   },
 };
+
 const roboto = Roboto({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
