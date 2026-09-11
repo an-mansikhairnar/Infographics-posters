@@ -1,6 +1,7 @@
 'use client';
 import { UploadImageFormData } from '@/app/interfaces/UploadImageFormData';
 import { COLORS } from '@/app/theme';
+import { buildAbsoluteImageUrl } from '@/app/utils/imageUrl';
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { toast } from 'react-hot-toast';
@@ -15,8 +16,6 @@ const inputClass =
 const fileButtonClass =
     'text-sm border border-gray-300 rounded-md px-1 py-1 bg-gray-50 hover:bg-gray-100 cursor-pointer';
 
-// const BASE_URL = 'https://images.infographicsposters.com';
-const BASE_URL = 'www.infographicsposters.com';
 const FULL_IMG_BASE = '/images/stories/infographics';
 const THUMB_IMG_BASE = '/images/stories/infographics-thumb';
 
@@ -35,7 +34,7 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
     );
 
     const buildUrl = (base: string, folder: string, fileName: string) =>
-        fileName ? `${BASE_URL}${base}/${folder}/${fileName}` : '';
+        fileName ? `${base}/${folder}/${fileName}` : '';
 
     const handleTextChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -128,10 +127,8 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
     };
     // Add this near the top, after buildUrl
     const getPreviewUrl = (file: File | null, savedUrl: string) => {
-        console.log('savedurl', savedUrl);
-        if (file) console.log('file', URL.createObjectURL(file));
         if (file) return URL.createObjectURL(file);
-        return `https://infographicsposters.com/${savedUrl}` || '';
+        return buildAbsoluteImageUrl(savedUrl);
     };
 
     return (
@@ -186,7 +183,7 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
                                     formData.fullImageFile
                                         ? getPreviewUrl(formData.fullImageFile, formData.fullImageUrl)
                                         : formData.fullImageUrl
-                                          ? `${process.env.NEXT_PUBLIC_BASE_URL}${formData.fullImageUrl}`
+                                          ? buildAbsoluteImageUrl(formData.fullImageUrl)
                                           : ''
                                 }
                                 alt="Full preview"
@@ -220,7 +217,7 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
                                     formData.fullImageFile
                                         ? getPreviewUrl(formData.thumbImageFile, formData.thumbImageUrl)
                                         : formData.thumbImageUrl
-                                          ? `${process.env.NEXT_PUBLIC_BASE_URL}${formData.thumbImageUrl}`
+                                          ? buildAbsoluteImageUrl(formData.thumbImageUrl)
                                           : ''
                                 }
                                 alt="Thumb preview"

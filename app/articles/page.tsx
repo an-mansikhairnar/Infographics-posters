@@ -161,6 +161,8 @@ export default function ArticlePage() {
                 thumbImageUrl = uploadData.thumbImageUrl || thumbImageUrl;
             }
 
+            const imageOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL;
+
             // Merge all form data
             const combinedData = {
                 ...articleFormData,
@@ -169,7 +171,7 @@ export default function ArticlePage() {
                 ...uploadImageFormData,
                 ...embededCode,
                 imageAltText: uploadImageFormData.imageAltText.trim().replace(/\s+/g, '-'),
-                imgPrefix: process.env.NEXT_PUBLIC_BASE_URL,
+                imgPrefix: imageOrigin,
                 fullImageUrl,
                 thumbImageUrl
             };
@@ -279,6 +281,7 @@ export default function ArticlePage() {
             }
             let fullImageUrl = editingArticle.fullImageUrl ?? uploadImageFormData.fullImageUrl ?? '';
             let thumbImageUrl = editingArticle.thumbImageUrl ?? uploadImageFormData.thumbImageUrl ?? '';
+            const imageOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL;
 
             // Upload Images
             if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
@@ -303,21 +306,10 @@ export default function ArticlePage() {
                     throw new Error('Image upload failed');
                 }
 
-                // const uploadData = await uploadRes.json();
-
-                // fullImageUrl = uploadData.fullImageUrl || fullImageUrl;
-                // thumbImageUrl = uploadData.thumbImageUrl || thumbImageUrl;
                 const uploadData = await uploadRes.json();
 
-                console.log('img path (raw response from /api/upload-image):', uploadData);
-
-                const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? '';
-
-                fullImageUrl = uploadData.fullImageUrl ? `${BASE_URL}${uploadData.fullImageUrl}` : fullImageUrl;
-
-                thumbImageUrl = uploadData.thumbImageUrl ? `${BASE_URL}${uploadData.thumbImageUrl}` : thumbImageUrl;
-
-                console.log('img path (after upload, before combinedData):', { fullImageUrl, thumbImageUrl });
+                fullImageUrl = uploadData.fullImageUrl || fullImageUrl;
+                thumbImageUrl = uploadData.thumbImageUrl || thumbImageUrl;
             }
 
             const combinedData = {
@@ -327,26 +319,11 @@ export default function ArticlePage() {
                 ...uploadImageFormData,
                 ...embededCode,
                 imageAltText: uploadImageFormData.imageAltText.trim().replace(/\s+/g, '-'),
-                imgPrefix: process.env.NEXT_PUBLIC_BASE_URL,
+                imgPrefix: imageOrigin,
                 fullImageUrl,
                 thumbImageUrl
             };
             console.log('🚀 ~ page.tsx:334 ~ handleUpdate ~ combinedData:', combinedData);
-
-            if (uploadImageFormData.fullImageFile || uploadImageFormData.thumbImageFile) {
-                const imageFormData = new FormData();
-                imageFormData.append('imgFolder', uploadImageFormData.imgFolder);
-                if (uploadImageFormData.fullImageFile)
-                    imageFormData.append('fullImageFile', uploadImageFormData.fullImageFile);
-                if (uploadImageFormData.thumbImageFile)
-                    imageFormData.append('thumbImageFile', uploadImageFormData.thumbImageFile);
-
-                const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-image`, {
-                    method: 'POST',
-                    body: imageFormData
-                });
-                if (!uploadRes.ok) throw new Error('Image upload failed');
-            }
 
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/articles/${editingArticle.articleId}`,

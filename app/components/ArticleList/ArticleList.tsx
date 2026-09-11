@@ -1,6 +1,7 @@
 'use client';
 import { FiTrash2, FiEdit2 } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
+import { buildAbsoluteImageUrl } from '@/app/utils/imageUrl';
 import { Article } from '../../interfaces/ArticleFormData';
 import Button from '@mui/material/Button';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -130,8 +131,7 @@ export default function ArticleListTable({ onEdit, refreshKey = 0 }: ArticleList
                   <td className='px-4 py-3 border-r border-slate-100 align-middle'>
                     {article.thumbImageUrl ? (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_BASE_URL}${article.thumbImageUrl}`
-                        }
+                        src={buildAbsoluteImageUrl(article.thumbImageUrl, article.imgPrefix || undefined)}
                         alt={article.imageAltText}
                         width={64}
                         height={80}

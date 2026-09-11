@@ -20,7 +20,12 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'www.infographicsposters.com'
+                hostname: 'beta.infographicsposters.com'
+            },
+            {
+                protocol: 'http',
+                hostname: 'localhost',
+                port: '3147'
             },
             {
                 protocol: 'http',
@@ -28,9 +33,15 @@ const nextConfig: NextConfig = {
                 port: '5173'
             },
             {
+                protocol: 'http',
+                hostname: 'localhost',
+                port: '9082'
+            },
+            {
                 protocol: 'https',
-                hostname: 'images.infographicsposters.com'
-            }
+                hostname: 'www.infographicsposters.com',
+                pathname: '/**'
+            },
         ]
     }
 };
