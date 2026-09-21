@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import InfographicCard from '../InfographicCard/InfographicCard';
 import SearchFilters from '../SearchFilters/SearchFilters';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Article } from '@/app/interfaces/infographics';
 import { LoadingSpinner, useLoading } from '@/app/context/loader';
 import { motion } from 'framer-motion';
@@ -11,13 +11,37 @@ import { useInfiniteScroll } from '@/app/hooks/infinite-scroll';
 import GoogleAds from '../GoogleAds/GoogleAds';
 import { Category } from '@/app/interfaces/category';
 
+type OrderedItem =
+    | { type: 'article'; data: Article; key: string }
+    | { type: 'ad'; key: string };
+
+const CARD_WIDTH = 187;
+const GAP = 28;
+
 export default function InfographicsGrid() {
     const [articles, setArticles] = useState<Article[]>([]);
     const [matchedCategoryId, setMatchedCategoryId] = useState<number>();
+    const [columnCount, setColumnCount] = useState(1);
+    const observerRef = useRef<ResizeObserver | null>(null);
     const searchParams = useSearchParams();
     const category = searchParams.get('category')?.toLowerCase() ?? '';
     const search = searchParams.get('search')?.toLowerCase() ?? '';
     const { loading, setLoading } = useLoading();
+    const AD_INTERVAL = 20;
+
+    const gridRef = useCallback((node: HTMLDivElement | null) => {
+        observerRef.current?.disconnect();
+        if (!node) return;
+
+        const update = () =>
+            setColumnCount(
+                Math.max(1, Math.floor((node.clientWidth + GAP) / (CARD_WIDTH + GAP)))
+            );
+
+        update();
+        observerRef.current = new ResizeObserver(update);
+        observerRef.current.observe(node);
+    }, []);
 
     // Filter articles by the selected category and search query.
     const filteredArticles = articles.filter((item) => {
@@ -38,15 +62,13 @@ export default function InfographicsGrid() {
                 return a.title.localeCompare(b.title);
 
             case 'oldest':
-                return new Date(a.created).getTime() - new Date(b.created).getTime();
+                return new Date(a.created).getTime() - new Date(a.created).getTime();
 
             case 'popular':
             default:
-                // HOT cards first
                 const aHot = a.hits > 2000;
                 const bHot = b.hits > 2000;
 
-                // HOT cards first
                 if (aHot !== bHot) {
                     return Number(bHot) - Number(aHot);
                 }
@@ -55,10 +77,8 @@ export default function InfographicsGrid() {
         }
     });
 
-    // Use sorted results when a search is active; otherwise keep the filtered list.
-    const displayArticles = search ? sortedArticles : filteredArticles;
+    const displayArticles = sortedArticles;
 
-    // Resolve the selected category ID from the category name.
     useEffect(() => {
         const fetchCategory = async () => {
             try {
@@ -96,10 +116,31 @@ export default function InfographicsGrid() {
 
         fetchArticles();
     }, []);
-    // Track how many cards should be shown based on the current scroll position.
-    const { visibleCount } = useInfiniteScroll(filteredArticles.length, `${category}|${search}`);
 
-    // Show the loading spinner while the first batch of articles is being fetched.
+    const { visibleCount } = useInfiniteScroll(displayArticles.length, `${category}|${search}|${ordering}`);
+    const visibleArticles = displayArticles.slice(0, visibleCount);
+
+    const orderedItems: OrderedItem[] = [];
+
+    visibleArticles.forEach((item, index) => {
+        orderedItems.push({
+            type: 'article',
+            data: item,
+            key: `article-${item.articleId}`,
+        });
+
+        const shouldInsertAd = (index + 1) % AD_INTERVAL === 0 && index < visibleArticles.length - 1;
+        if (shouldInsertAd) {
+            orderedItems.push({
+                type: 'ad',
+                key: `ad-after-${item.articleId}`,
+            });
+        }
+    });
+
+    const columns: OrderedItem[][] = Array.from({ length: columnCount }, () => []);
+    orderedItems.forEach((item, i) => columns[i % columnCount].push(item));
+
     if (loading && articles.length === 0) {
         return (
             <section className="flex-1">
@@ -109,31 +150,101 @@ export default function InfographicsGrid() {
             </section>
         );
     }
+
     return (
         <section className="flex-1 p-5">
             {search && <SearchFilters />}
 
-            <div className="columns-[187px] gap-2 xl:w-[90%]">
-                {displayArticles.slice(0, visibleCount).map((item) => (
-                    <div key={item.articleId} className="break-inside-avoid mb-3">
-                        <motion.div layout transition={{ duration: 0.5 }}>
-                            <InfographicCard item={item} />
-                        </motion.div>
-                        {displayArticles.indexOf(item) % 20 === 0 && <GoogleAds adSlot="3319549365" />}
+            <div
+                ref={gridRef}
+                className="flex w-full items-start xl:w-[90%]"
+                style={{ columnGap: GAP }}
+            >
+                {columns.map((columnItems, colIndex) => (
+                    <div key={colIndex} className="flex w-[187px] flex-col">
+                        {columnItems.map((item) => {
+                            /*
+                             * Google AdSense vertical ad
+                             */
+                            if (item.type === 'ad') {
+                                return (
+                                    <div key={item.key} className="mb-5 w-[187px]">
+                                        <div className="w-[187px] overflow-hidden">
+                                            <GoogleAds
+                                                adSlot="8991134354"
+                                                style={{
+                                                    display: 'block',
+                                                    width: '187px',
+                                                    height: '600px',
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            /*
+                             * Infographic card
+                             */
+                            return (
+                                <div key={item.key} className="mb-5 w-[187px]">
+                                    <motion.div
+                                        layout
+                                        transition={{ duration: 0.5 }}
+                                        className="w-[187px]"
+                                    >
+                                        <InfographicCard item={item.data} />
+                                    </motion.div>
+                                </div>
+                            );
+                        })}
                     </div>
                 ))}
             </div>
 
-            {visibleCount < filteredArticles.length && <LoadingSpinner />}
+            {/* Loading indicator */}
+            {visibleCount < displayArticles.length && (
+                <LoadingSpinner />
+            )}
 
-            {(category && filteredArticles.length === 0) && (
-                <div className="bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3">
+            {/* No category results */}
+            {category && displayArticles.length === 0 && (
+                <div
+                    className="
+                        mx-auto
+                        mt-3
+                        mb-[2%]
+                        w-fit
+                        rounded-md
+                        bg-[#333]
+                        px-6
+                        py-4
+                        text-center
+                        text-[13px]
+                        text-white
+                    "
+                >
                     No more infographics to show
                 </div>
             )}
 
-            {search && filteredArticles.length < 20 && (
-                <div className="bg-[#333] text-white text-center rounded-md p-4 text-[13px] mx-auto w-[30%] mb-[2%] mt-3">
+            {/* No search results */}
+            {search && displayArticles.length < 20 && (
+                <div
+                    className="
+                        mx-auto
+                        mt-3
+                        mb-[2%]
+                        w-fit
+                        rounded-md
+                        bg-[#333]
+                        px-6
+                        py-4
+                        text-center
+                        text-[13px]
+                        text-white
+                    "
+                >
                     No more infographics to show
                 </div>
             )}

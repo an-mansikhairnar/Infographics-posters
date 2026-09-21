@@ -47,7 +47,7 @@ export default function CategoriesSidebar() {
                         <button
                             key={category.catId}
                             onClick={() => handleCategoryClick(category.title)}
-                            className={`w-[177px] h-[30px] flex items-center text-left px-4 border-b border-gray-200 border-r-2 transition-colors text-[12px] font-medium hover:text-cyan-500 hover:border-l-cyan-500 hover:border-r-cyan-600 ${
+                            className={`w-[177px] h-[30px] cursor-pointer flex items-center text-left px-4 border-b border-gray-200 border-r-2 transition-colors text-[12px] font-medium hover:text-cyan-500 hover:border-l-cyan-500 hover:border-r-cyan-600 ${
                                 isActive
                                     ? 'text-cyan-600 border-l-cyan-500 border-r-cyan-600'
                                     : 'text-gray-500 border-l-transparent border-r-transparent'

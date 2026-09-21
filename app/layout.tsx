@@ -7,7 +7,6 @@ import { LoadingProvider } from './context/loader';
 import { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { siteMetadata, siteOpenGraph } from './constants/metadata';
-// import { ADSENSE_CLIENT_ID } from './constants/ads';
 
 export const viewport: Viewport = {
   themeColor: '#1976d2',
@@ -16,7 +15,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 };
-
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteMetadata.siteUrl),
@@ -27,8 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     ...siteOpenGraph,
     title: 'Home',
-    description:
-      siteMetadata.defaultDescription,
+    description: siteMetadata.defaultDescription,
     url: siteMetadata.siteUrl,
   },
   other: {
@@ -49,27 +46,19 @@ const roboto = Roboto({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <html lang='en'>
-        <body>
-          <LoadingProvider>
-            <Suspense fallback={null}>
-              <Navbar />
+    <html lang='en'>
+      <body>
+        <LoadingProvider>
+          <Suspense fallback={null}>
+            <Navbar />
 
-              <div className='flex'>
-                <CategoriesSidebar />
-                <div className='flex-1'>{children}</div>
-              </div>
-            </Suspense>
-          </LoadingProvider>
-        </body>
-        <Script
-          async
-          strategy='afterInteractive'
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-          crossOrigin='anonymous'
-        />
-      </html>
-    </>
+            <div className='flex'>
+              <CategoriesSidebar />
+              <div className='flex-1'>{children}</div>
+            </div>
+          </Suspense>
+        </LoadingProvider>
+      </body>
+    </html>
   );
 }

@@ -9,22 +9,60 @@ import { LoadingSpinner } from '@/app/context/loader';
 import GoogleAds from '../GoogleAds/GoogleAds';
 import { buildAbsoluteImageUrl, getPublicOrigin } from '@/app/utils/imageUrl';
 
+const createArticleSlug = (value: string) =>
+  value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\'’]/g, '')
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
 export default function DetailPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const params = useParams<{ slug?: string; id?: string }>();
+  const id = params.id as string | undefined;
+  const slug = params.slug as string | undefined;
   const [article, setArticle] = useState<Article | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-
     const fetchArticle = async () => {
       setLoading(true);
 
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles/${id}`);
+        let articleId = id;
+
+        if (!articleId && slug) {
+          const normalizedSlug = slug.replace(/\.html$/i, '');
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`);
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch articles');
+          }
+
+          const articles: Article[] = await response.json();
+          const matchedArticle = articles.find((item) => {
+            const alias = createArticleSlug(item.alias || '');
+            const normalizedAlias = createArticleSlug(normalizedSlug);
+
+            return alias === normalizedAlias || item.alias === normalizedSlug || `${item.alias}.html` === slug;
+          });
+
+          if (!matchedArticle) {
+            throw new Error('Article not found');
+          }
+
+          articleId = String(matchedArticle.articleId);
+        }
+
+        if (!articleId) {
+          setArticle(null);
+          return;
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles/${articleId}`);
 
         if (!res.ok) {
           throw new Error('Failed to fetch article');
@@ -32,19 +70,19 @@ export default function DetailPage() {
 
         const data: Article = await res.json();
 
-        // Optional: keep spinner visible a little longer
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         setArticle(data);
       } catch (error) {
         console.error('Failed to fetch article:', error);
+        setArticle(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchArticle();
-  }, [id]);
+  }, [id, slug]);
 
   useEffect(() => {
     if (!article) return;
@@ -76,8 +114,10 @@ export default function DetailPage() {
 
   const siteUrl = getPublicOrigin();
 
+  const articleDetailUrl = article ? `${siteUrl}/infographics/${createArticleSlug(article.alias)}.html` : '';
+
   const embedCode = article
-    ? `<a href="${siteUrl}/${categorySlug}/${article.alias}/${article.articleId}">
+    ? `<a href="${articleDetailUrl}">
          <img src="${fullImage}" style="max-width:100%" alt="${article.title}" />
        </a>
        <p>Filed at Infographicsposters.com in
@@ -110,11 +150,19 @@ export default function DetailPage() {
     return <div className='p-5'>Article not found.</div>;
   }
 
+
   return (
     <div className='container mx-5 my-6 rounded border border-gray-300 bg-white p-6'>
-      <GoogleAds adSlot='3319549365' />
-      <h1 className='mb-4 mt-15 text-3xl font-bold text-cyan-600'>{article.title}</h1>
 
+      {/* Horizontal Ad Unit (InfographicsHorizontalAd) */}
+    <div className="w-full my-4 flex justify-center overflow-x-auto">
+      <GoogleAds
+        adSlot="8300554865"
+        style={{ display: 'inline-block', width: '728px', height: '90px' }}
+      />
+    </div>
+
+    <h1 className='mb-4 mt-15 text-3xl font-bold text-cyan-600'>{article.title}</h1>
       <div className='mb-4 flex gap-8 text-sm'>
         <p className='text-[12px]'>
           <strong>Category:</strong> {categoryName}
@@ -154,11 +202,14 @@ export default function DetailPage() {
         <div className='px-4 py-3'>
           <button
             onClick={handleCopy}
-            className='text-shadow-lg/30 rounded bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600'
-          >
-            COPY {copied && ''}
-          </button>
-
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+                copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-cyan-500 text-white hover:bg-cyan-600 active:scale-95'
+            }`}
+        >
+            {copied ? 'COPIED' : 'COPY'}
+        </button>
           <textarea
             readOnly
             rows={6}
