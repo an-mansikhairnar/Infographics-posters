@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f4f6;
+  --foreground: #172033;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #d8dee8;
+  --muted: #64748b;
 }
 
 @theme inline {
@@ -14,13 +18,110 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+    --background: #111827;
+    --foreground: #e5e7eb;
+    --surface: #1f2937;
+    --surface-muted: #273449;
+    --border: #40506a;
+    --muted: #aab7ca;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bg-white,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-slate-50 {
+    background-color: var(--surface) !important;
+  }
+
+  .bg-slate-100 {
+    background-color: var(--surface-muted) !important;
+  }
+
+  .text-gray-800,
+  .text-gray-700,
+  .text-gray-600,
+  .text-slate-800,
+  .text-slate-700,
+  .text-slate-600 {
+    color: var(--foreground) !important;
+  }
+
+  .text-gray-500,
+  .text-slate-500,
+  .text-slate-400 {
+    color: var(--muted) !important;
+  }
+
+  .border-gray-200,
+  .border-gray-300,
+  .border-slate-100,
+  .border-slate-200,
+  .border-slate-300 {
+    border-color: var(--border) !important;
+  }
+
+  input,
+  textarea,
+  select {
+    color: var(--foreground);
+    background-color: var(--surface);
+    border-color: var(--border);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+  }
+
+  option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  .hover\:bg-slate-50:hover,
+  .hover\:bg-gray-50:hover {
+    background-color: var(--surface-muted) !important;
+  }
+
+  .sun-editor,
+  .sun-editor .se-toolbar,
+  .sun-editor .se-wrapper,
+  .sun-editor-editable {
+    background-color: var(--surface) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+  }
+
+  .sun-editor .se-btn-module-border,
+  .sun-editor .se-btn {
+    border-color: var(--border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .MuiDialog-paper,
+  .MuiDialogContent-root,
+  .MuiDialogActions-root,
+  .MuiDialogTitle-root {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  .MuiDialogContent-root {
+    border-color: var(--border);
+  }
+
+  .MuiIconButton-root,
+  .MuiTypography-root {
+    color: var(--foreground);
+  }
 }

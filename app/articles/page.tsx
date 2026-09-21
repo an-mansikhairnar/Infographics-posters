@@ -387,7 +387,12 @@ export default function ArticlePage() {
                             <SocialFieldsForm value={socialFieldsFormData} onDataChange={setSocialFieldsFormData} />
                         </div>
                         <div>
-                            <UploadImageForm value={uploadImageFormData} onDataChange={setUploadImageFormData} />
+                            <UploadImageForm
+                                key={editingArticle?.articleId ?? `new-${open}`}
+                                value={uploadImageFormData}
+                                imagePrefix={editingArticle?.imgPrefix}
+                                onDataChange={setUploadImageFormData}
+                            />
                             <MetaForm value={metaFormData} onDataChange={setMetaFormData} />
                         </div>
                     </div>

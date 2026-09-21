@@ -7,6 +7,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { toast } from 'react-hot-toast';
 interface UploadImageFormProps {
     value?: UploadImageFormData;
+    imagePrefix?: string;
     onDataChange: (data: UploadImageFormData) => void;
     onSubmit?: (data: UploadImageFormData) => void;
 }
@@ -21,7 +22,7 @@ const THUMB_IMG_BASE = '/images/stories/infographics-thumb';
 
 const FOLDER_OPTIONS = ['IP3501-IP4000', 'IP4001-IP4500'];
 
-export default function UploadImageForm({ value, onDataChange, onSubmit }: UploadImageFormProps) {
+export default function UploadImageForm({ value, imagePrefix, onDataChange, onSubmit }: UploadImageFormProps) {
     const [formData, setFormData] = useState<UploadImageFormData>(
         value ?? {
             imgFolder: FOLDER_OPTIONS[1],
@@ -128,7 +129,7 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
     // Add this near the top, after buildUrl
     const getPreviewUrl = (file: File | null, savedUrl: string) => {
         if (file) return URL.createObjectURL(file);
-        return buildAbsoluteImageUrl(savedUrl);
+        return buildAbsoluteImageUrl(savedUrl, imagePrefix);
     };
 
     return (
@@ -183,7 +184,7 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
                                     formData.fullImageFile
                                         ? getPreviewUrl(formData.fullImageFile, formData.fullImageUrl)
                                         : formData.fullImageUrl
-                                          ? buildAbsoluteImageUrl(formData.fullImageUrl)
+                                          ? buildAbsoluteImageUrl(formData.fullImageUrl, imagePrefix)
                                           : ''
                                 }
                                 alt="Full preview"
@@ -214,10 +215,10 @@ export default function UploadImageForm({ value, onDataChange, onSubmit }: Uploa
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                                 src={
-                                    formData.fullImageFile
+                                    formData.thumbImageFile
                                         ? getPreviewUrl(formData.thumbImageFile, formData.thumbImageUrl)
                                         : formData.thumbImageUrl
-                                          ? buildAbsoluteImageUrl(formData.thumbImageUrl)
+                                        ? buildAbsoluteImageUrl(formData.thumbImageUrl, imagePrefix)
                                           : ''
                                 }
                                 alt="Thumb preview"

@@ -62,7 +62,7 @@ export default function Login() {
       <div className='w-full max-w-[540px] rounded border border-gray-200 bg-white'>
         {/* Header */}
         <div className='border-b py-5 border-gray-200'>
-          <h2 className='text-center text-2xl font-semibold text-blue-950'>Login</h2>
+          <h2 className='text-center text-2xl font-semibold text-gray-800'>Login</h2>
         </div>
 
         {/* Form */}
