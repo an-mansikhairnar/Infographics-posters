@@ -116,14 +116,19 @@ export default function DetailPage() {
 
   const articleDetailUrl = article ? `${siteUrl}/infographics/${createArticleSlug(article.alias)}.html` : '';
 
+  const categoryUrl = categoryName
+    ? `${siteUrl}/?category=${encodeURIComponent(categoryName)}`
+    : '';
+
   const embedCode = article
     ? `<a href="${articleDetailUrl}">
-         <img src="${fullImage}" style="max-width:100%" alt="${article.title}" />
-       </a>
-       <p>Filed at Infographicsposters.com in
-         <a href="${siteUrl}/${categorySlug}">${categoryName} Infographics</a>
-       </p>`
+    <img src="${fullImage}" style="max-width:100%" alt="${article.title}" />
+  </a>
+  <p>Filed at Infographicsposters.com in
+    <a href="${categoryUrl}">${categoryName} Infographics</a>
+  </p>`
     : '';
+
   const imageUrl = buildAbsoluteImageUrl(article?.fullImageUrl || article?.thumbImageUrl, article?.imgPrefix || undefined);
 
   const handleCopy = async () => {
@@ -173,12 +178,74 @@ export default function DetailPage() {
         </p>
       </div>
 
-      <div className='mb-6 flex flex-wrap gap-2'>
+      {/* <div className='mb-6 flex flex-wrap gap-2'>
         <Image src='/assets/pinterest.svg' alt='Pinterest' width={50} height={32} />
         <Image src='/assets/Facebook.svg' alt='Facebook' width={50} height={32} />
         <Image src='/assets/twitter.svg' alt='Twitter' width={50} height={32} />
         <Image src='/assets/linkedin.svg' alt='LinkedIn' width={50} height={32} />
-      </div>
+      </div> */}
+
+      <div className="mb-6 flex flex-wrap gap-2">
+    <a
+        href="https://www.pinterest.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Pinterest"
+    >
+        <Image
+            src="/assets/pinterest.svg"
+            alt="Pinterest"
+            width={50}
+            height={32}
+            className="cursor-pointer"
+        />
+    </a>
+
+    <a
+        href="https://www.facebook.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Facebook"
+    >
+        <Image
+            src="/assets/Facebook.svg"
+            alt="Facebook"
+            width={50}
+            height={32}
+            className="cursor-pointer"
+        />
+    </a>
+
+    <a
+        href="https://twitter.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Twitter"
+    >
+        <Image
+            src="/assets/twitter.svg"
+            alt="Twitter"
+            width={50}
+            height={32}
+            className="cursor-pointer"
+        />
+    </a>
+
+    <a
+        href="https://www.linkedin.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="LinkedIn"
+    >
+        <Image
+            src="/assets/linkedin.svg"
+            alt="LinkedIn"
+            width={50}
+            height={32}
+            className="cursor-pointer"
+        />
+    </a>
+</div>
 
       <p className='text-[12px]' dangerouslySetInnerHTML={{ __html: article.fullDescription }} />
 

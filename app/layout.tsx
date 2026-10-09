@@ -1,12 +1,23 @@
-import { Roboto } from 'next/font/google';
+import {
+  Bebas_Neue,
+  Bricolage_Grotesque,
+  Caveat,
+  DM_Serif_Display,
+  Inter,
+  Lora,
+  Manrope,
+  Montserrat,
+  Playfair_Display,
+  Poppins,
+  Roboto,
+  Space_Grotesk,
+} from 'next/font/google';
 import './globals.css';
-import Navbar from './component/Navbar/Navbar';
-import CategoriesSidebar from './component/CategoriesSidebar/CategoriesSidebar';
-import { Suspense } from 'react';
+import '@/styles/infographic.css';
 import { LoadingProvider } from './context/loader';
 import { Metadata, Viewport } from 'next';
-import Script from 'next/script';
 import { siteMetadata, siteOpenGraph } from './constants/metadata';
+import ClientLayout from './component/ClientLayout/ClientLayout';
 
 export const viewport: Viewport = {
   themeColor: '#1976d2',
@@ -49,14 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang='en'>
       <body>
         <LoadingProvider>
-          <Suspense fallback={null}>
-            <Navbar />
-
-            <div className='flex'>
-              <CategoriesSidebar />
-              <div className='flex-1'>{children}</div>
-            </div>
-          </Suspense>
+          <ClientLayout>{children}</ClientLayout>
         </LoadingProvider>
       </body>
     </html>
