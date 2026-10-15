@@ -32,7 +32,8 @@ const ARROW_NUDGES: Record<string, readonly [number, number]> = {
 export default function Editor({ id }: Readonly<{ id: string }>) {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
-  const userId = session?.user?.id;
+  const user = session?.user;
+  const userId = user?.id;
   const hostRef = useRef<HTMLDivElement>(null!),
     scrollRef = useRef<HTMLElement>(null!),
     canvasRef = useRef<Canvas>(null!),
@@ -299,6 +300,16 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
               .concat(['Inter', 'Poppins', 'Playfair Display'])
           );
           await buildTemplate(F, canvas, t);
+        }
+        } else if (rec.objects && rec.objects.length) {
+        await ensureFonts(
+          rec.objects
+            .map((o) => o.fontFamily)
+            .filter((font): font is string => Boolean(font))
+            .concat(['Inter', 'Poppins', 'Playfair Display'])
+        );
+        for (const obj of rec.objects) {
+          canvas.add(await createObject(F, obj));
         }
       }
       if (dead) return;

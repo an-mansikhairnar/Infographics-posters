@@ -1,45 +1,84 @@
-/**
- * Persistence layer. Everything is async on purpose: to move to a backend later,
- * replace the bodies of these functions with fetch() calls and nothing else changes.
- *
- * Design record shape:
- * { id, name, width, height, bg:{type,c1,c2}, templateId, data (fabric JSON), thumb (dataURL), createdAt, updatedAt }
- */
-const KEY = 'infographics:designs:v1';
-const ASSET_KEY = 'infographics:assets:v1';
+import type { AssetRecord, DesignInput, DesignRecord } from './types';
 
 const read = <T>(k: string): T[] => { try { return JSON.parse(localStorage.getItem(k) || '[]') as T[]; } catch { return []; } };
 const write = (k: string, v: unknown) => localStorage.setItem(k, JSON.stringify(v)); // may throw QuotaExceededError
 
-export const newId = () => 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-
-export async function listDesigns(): Promise<DesignRecord[]> { return read<DesignRecord>(KEY).sort((a, b) => b.updatedAt - a.updatedAt); }
-export async function getDesign(id: string): Promise<DesignRecord | null> { return read<DesignRecord>(KEY).find((d) => d.id === id) || null; }
-
-export async function saveDesign(design: DesignInput): Promise<DesignRecord> {
-  const list = read<DesignRecord>(KEY);
-  const i = list.findIndex((d) => d.id === design.id);
-  const rec = { ...(i >= 0 ? list[i] : { createdAt: Date.now() }), ...design, updatedAt: Date.now() };
-  if (i >= 0) list[i] = rec; else list.push(rec);
-  write(KEY, list);
-  return rec;
+export const newId = () => `d_${crypto.randomUUID().replaceAll('-', '')}`;
+class DesignRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'DesignRequestError';
+  }
 }
 
-export async function deleteDesign(id: string) { write(KEY, read<DesignRecord>(KEY).filter((d) => d.id !== id)); }
+async function designRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...init.headers },
+    credentials: 'same-origin',
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload !== null && 'message' in payload && typeof payload.message === 'string'
+        ? payload.message
+        : `Request failed (${response.status}).`;
+    throw new DesignRequestError(message, response.status);
+  }
+  return payload as T;
+}
+
+export async function listDesigns(): Promise<DesignRecord[]> {
+  const response = await designRequest<{ designs: DesignRecord[] }>('/api/creator-designs');
+  return response.designs;
+}
+
+export async function getDesign(id: string): Promise<DesignRecord | null> {
+  try {
+    const response = await designRequest<{ design: DesignRecord }>(`/api/creator-designs/${encodeURIComponent(id)}`);
+    return response.design;
+  } catch (error) {
+    if (error instanceof DesignRequestError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function saveDesign(design: DesignInput): Promise<DesignRecord> {
+  const response = await designRequest<{ design: DesignRecord }>('/api/creator-designs', {
+    method: 'POST',
+    body: JSON.stringify(design),
+  });
+  return response.design;
+}
+
+export async function deleteDesign(id: string): Promise<void> {
+  await designRequest<{ deleted: boolean }>(`/api/creator-designs/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
 
 export async function duplicateDesign(id: string) {
   const d = await getDesign(id);
   if (!d) return null;
-  return saveDesign({ ...d, id: newId(), name: d.name + ' (copy)', createdAt: Date.now() });
+  return saveDesign({ ...d, id: newId(), name: d.name + ' (copy)', createdAt: Date.now(), updatedAt: Date.now() });
 }
 
-// Uploaded images library (compressed data URLs). Swap for a real upload API later.
-export async function listAssets(): Promise<AssetRecord[]> { return read<AssetRecord>(ASSET_KEY); }
-export async function addAsset(src: string): Promise<AssetRecord> {
-  const list = read<AssetRecord>(ASSET_KEY);
-  const a = { id: newId(), src };
-  write(ASSET_KEY, [a, ...list].slice(0, 30));
-  return a;
+const assetKey = (userId?: string) => `infographics:assets:v1:${userId || 'anonymous'}`;
+
+// Uploaded image assets remain local; design documents are stored in the creator API.
+export function listAssets(userId?: string): Promise<AssetRecord[]> {
+  return Promise.resolve().then(() => read<AssetRecord>(assetKey(userId)));
 }
-export async function deleteAsset(id: string) { write(ASSET_KEY, read<AssetRecord>(ASSET_KEY).filter((a) => a.id !== id)); }
-import type { AssetRecord, DesignInput, DesignRecord } from './types';
+export function addAsset(src: string, userId?: string): Promise<AssetRecord> {
+  return Promise.resolve().then(() => {
+    const key = assetKey(userId);
+    const list = read<AssetRecord>(key);
+    const asset = { id: newId(), src };
+    write(key, [asset, ...list].slice(0, 30));
+    return asset;
+  });
+}
+export function deleteAsset(id: string, userId?: string): Promise<void> {
+  return Promise.resolve().then(() => {
+    const key = assetKey(userId);
+    write(key, read<AssetRecord>(key).filter((asset) => asset.id !== id));
+  });
+}

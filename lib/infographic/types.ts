@@ -85,6 +85,7 @@ export type DesignRecord = DesignDocument & {
   bg: Background;
   templateId: string | null;
   data: unknown;
+  objects?: ObjectDescriptor[];
   thumb: string | null;
   createdAt: number;
   updatedAt: number;

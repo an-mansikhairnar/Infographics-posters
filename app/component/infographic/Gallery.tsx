@@ -9,11 +9,14 @@ import { deleteDesign, duplicateDesign, listDesigns, newId, saveDesign } from '@
 import type { Background, DesignRecord, Template } from '@/lib/infographic/types';
 import Preview from './Preview';
 import { Icon } from './ui';
-
+import { Sparkles } from 'lucide-react';
+import {  ThemeKey, compileBackendToTemplate } from '@/lib/infographic/aiCompiler';
+import AiInfographicModal from './AiGenerateModal';
 export default function Gallery() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const userId = session?.user?.id;
+  const user = session?.user;
+  const userId = user?.id;
   const [designs, setDesigns] = useState<DesignRecord[]>([]);
   const [cat, setCat] = useState('All');
   const [size, setSize] = useState(PAGE_SIZES[1]);
@@ -21,6 +24,18 @@ export default function Gallery() {
   const [useCustom, setUseCustom] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [busyDesignId, setBusyDesignId] = useState<string | null>(null);
+    const [showAiModal, setShowAiModal] = useState(false);
+      const [aiPrompt, setAiPrompt] = useState('');
+      const [aiTheme, setAiTheme] = useState<ThemeKey>('editorialGold');
+      const [aiLoading, setAiLoading] = useState(false);
+      const [aiError, setAiError] = useState<string | null>(null);
+
+      const SUGGESTIONS = [
+        '5 Morning Habits for High Productivity and Focus',
+        'Remote Work vs Office Work: Pros, Cons and Stats',
+        'Global Smartphone Market Share & Trends this Year',
+        'Step-by-Step Guide to Launching a Tech Startup',
+      ];
 
   useEffect(() => {
     if (!userId) return;
@@ -37,6 +52,10 @@ export default function Gallery() {
       });
     return () => { cancelled = true; };
   }, [userId]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/login?callbackUrl=%2Finfographic-maker');
+  }, [router, status]);
 
   const open = (id: string) => router.push(`/infographic-maker/editor/${id}`);
 
@@ -82,12 +101,55 @@ export default function Gallery() {
       setBusyDesignId(null);
     }
   }
+  async function generateWithAi() {
+          if (!aiPrompt.trim()) return;
+          setAiLoading(true);
+          setAiError(null);
+          try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: aiPrompt }),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || 'Failed to generate infographic');
+            }
+
+            const json = await res.json();
+            if (!json.data) throw new Error('No data received from AI');
+
+            const id = newId();
+            const compiled = compileBackendToTemplate(json.data, id, json.data.theme);
+
+            const saved = await saveDesign({
+              id,
+              name: compiled.name,
+              width: compiled.width,
+              height: compiled.height,
+              bg: compiled.bg,
+              templateId: null,
+              objects: compiled.objects,
+              data: null,
+              thumb: null,
+            });
+
+            setDesigns((current) => [saved, ...current.filter((design) => design.id !== saved.id)]);
+            setShowAiModal(false);
+            open(id);
+          } catch (err: unknown) {
+            setAiError((err as Error).message || 'Something went wrong. Please try again.');
+          } finally {
+            setAiLoading(false);
+          }
+        }
 
   const templates = useMemo(() => TEMPLATES.filter((t) => cat === 'All' || t.category === cat), [cat]);
 
-  if (status !== 'authenticated' || !userId) {
+  if (status === 'loading') {
     return <div className="ie-boot">Loading your designs…</div>;
   }
+  if (!userId) return <div className="ie-boot">Redirecting to sign in…</div>;
 
   return (
     <div className="ie-gallery">
@@ -99,6 +161,7 @@ export default function Gallery() {
       <section className="ie-hero">
         <div>
           <h1>Design an infographic that explains itself</h1>
+          {/* <p>Choose your layout, pick a template, or start completely from scratch. Build self-explanatory infographics exactly how you want.</p> */}
           <p>Choose your layout, pick a template, or start completely from scratch. Build self-explanatory infographics exactly how you want.</p>
         </div>
         <div className="ie-blank">
@@ -117,7 +180,19 @@ export default function Gallery() {
               <input type="number" value={custom.h} onChange={(e) => setCustom({ ...custom, h: e.target.value })} />{' px'}
             </div>
           )}
-          <button className="ie-btn primary" onClick={() => create(null)}><Icon name="plus" /> Create blank</button>
+          {/* <button className="ie-btn primary" onClick={() => create(null)}><Icon name="plus" /> Create blank</button> */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <button className="ie-btn" onClick={() => create(null)}>
+            <Icon name="plus" /> Design Manually
+          </button>
+          <button
+            className="ie-btn primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => setShowAiModal(true)}
+          >
+            <Sparkles size={16} /> Design with AI
+          </button>
+        </div>
         </div>
       </section>
 
@@ -158,6 +233,16 @@ export default function Gallery() {
           ))}
         </div>
       </section>
+      <AiInfographicModal
+        open={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        prompt={aiPrompt}
+        setPrompt={setAiPrompt}
+        error={aiError}
+        loading={aiLoading}
+        onGenerate={generateWithAi}
+        suggestions={SUGGESTIONS}
+      />
     </div>
   );
 }

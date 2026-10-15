@@ -216,7 +216,16 @@ function ChartEditor({ api, o }: Pick<PropsPanelProps, 'api' | 'o'>) {
     </Section>
   );
 }
-
+const layerIds = new WeakMap<object, string>();
+let layerCounter = 0;
+function getLayerKey(o: object): string {
+  let k = layerIds.get(o);
+  if (!k) {
+    k = `layer_${++layerCounter}`;
+    layerIds.set(o, k);
+  }
+  return k;
+}
 function Layers({ api, selection, tick }: LayerPanelProps) {
   const c = api.canvas; if (!c) return null;
   const list = c.getObjects().slice().reverse() as InfographicObject[];
@@ -236,7 +245,7 @@ function Layers({ api, selection, tick }: LayerPanelProps) {
     <div className="ie-layers" data-t={tick}>
       {!list.length && <p className="ie-empty">No elements yet.</p>}
       {list.map((o) => (
-        <div key={`${o.name || o.type}-${o.left}-${o.top}`} className={'ie-layer' + (selection.includes(o) ? ' on' : '')}>
+         <div key={getLayerKey(o)} className={'ie-layer' + (selection.includes(o) ? ' on' : '')}>
           <button type="button" className="ie-layer-select" onClick={() => api.select(o)}>
             <Icon name={ico(o)} size={15} /><span>{label(o)}</span>
           </button>

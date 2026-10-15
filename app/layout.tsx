@@ -1,23 +1,11 @@
-import {
-  Bebas_Neue,
-  Bricolage_Grotesque,
-  Caveat,
-  DM_Serif_Display,
-  Inter,
-  Lora,
-  Manrope,
-  Montserrat,
-  Playfair_Display,
-  Poppins,
-  Roboto,
-  Space_Grotesk,
-} from 'next/font/google';
+import { Roboto } from 'next/font/google';
 import './globals.css';
 import '@/styles/infographic.css';
 import { LoadingProvider } from './context/loader';
 import { Metadata, Viewport } from 'next';
 import { siteMetadata, siteOpenGraph } from './constants/metadata';
 import ClientLayout from './component/ClientLayout/ClientLayout';
+import { SessionProvider } from 'next-auth/react';
 
 export const viewport: Viewport = {
   themeColor: '#1976d2',
@@ -46,7 +34,7 @@ export const metadata: Metadata = {
     'my:tw': 'on',
     'my:in': 'on',
     'my:pint': 'on',
-    HandheldFriendly: 'true',
+    'HandheldFriendly': 'true',
   },
 };
 
@@ -57,10 +45,12 @@ const roboto = Roboto({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang='en'>
+    <html lang="en">
       <body>
         <LoadingProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <SessionProvider>
+            <ClientLayout>{children}</ClientLayout>
+          </SessionProvider>
         </LoadingProvider>
       </body>
     </html>
