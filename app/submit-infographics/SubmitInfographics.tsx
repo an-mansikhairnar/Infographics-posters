@@ -1,3 +1,563 @@
+// 'use client';
+
+// import Image from 'next/image';
+// import { useEffect, useState } from 'react';
+// import { FacebookShareButton, LinkedinShareButton, PinterestShareButton, TwitterShareButton } from 'react-share';
+// import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+// import CheckoutComponent from '../component/CheckoutComponent/CheckoutComponent';
+// import { Category } from '../interfaces/category';
+
+// const normalizeImageUrl = (value?: string) => {
+//   if (!value) return '';
+
+//   try {
+//     const url = new URL(value);
+//     return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : '';
+//   } catch {
+//     return '';
+//   }
+// };
+
+// export default function SubmitInfographics({ initialImageUrl }: Readonly<{ initialImageUrl?: string }>) {
+//   const editorImageUrl = normalizeImageUrl(initialImageUrl);
+//   const [showForm, setShowForm] = useState(false);
+//   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+//   const shareUrl = `${siteUrl}/submit-infographics.html`;
+//   const title = 'Submit Infographics';
+//   const media = `${siteUrl}/logo-infographics.png`;
+
+//   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+//   const isPaypalConfigured = Boolean(paypalClientId);
+
+//   const initialOptions = {
+//     'clientId': paypalClientId!,
+//     'currency': 'USD',
+//     'intent': 'capture',
+//     'disable-funding': 'card',
+//   };
+
+//   const [submitAttempt, setSubmitAttempt] = useState(false);
+// const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+//   const [formData, setFormData] = useState({
+//     title: '',
+//     catId: '',
+//     email: '',
+//     description: '',
+//     imgUrl: editorImageUrl,
+//     // Optional social fields
+//     facebook: '',
+//     facebookUrl: '',
+//     twitter: '',
+//     twitterUrl: '',
+//     instagram: '',
+//     instagramUrl: '',
+//     // Optional
+//     liveUrl: '',
+//   });
+
+//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+//     const { name, value } = e.target;
+
+//     setFormData((prev) => ({
+//       ...prev,
+//       [name]: value,
+//     }));
+
+//     setSubmitAttempt(false);
+//   };
+
+//   const [paymentData, setPaymentData] = useState<{
+//     orderId: string;
+//     payerId: string;
+//     transactionId: string;
+//     amount: string;
+//     currency: string;
+//     state: string;
+//     address: string;
+//     clientName: string;
+//   } | null>(null);
+
+//   const addNewArticle = async (e: React.FormEvent<HTMLFormElement>) => {
+//     e.preventDefault();
+
+//     // Payment is mandatory
+//     if (!paymentData) {
+//       alert('Please complete the payment first.');
+//       return;
+//     }
+
+//     // PayPal transaction is mandatory
+//     if (!paymentData.transactionId) {
+//       alert('PayPal payment was not completed.');
+//       return;
+//     }
+
+//     // Validate form
+//     if (!formData.title.trim() || !formData.catId || !formData.email.trim() || !formData.description.trim() || !formData.imgUrl.trim()) {
+//       setSubmitAttempt(true);
+//       return;
+//     }
+
+//     // Everything is valid
+//     setSubmitAttempt(false);
+
+//     try {
+//       const payload = {
+//         title: formData.title.trim(),
+//         catId: Number(formData.catId),
+//         email: formData.email.trim(),
+//         desc: formData.description.trim(),
+//         imgUrl: formData.imgUrl.trim(),
+//         // Optional social fields
+//         facebook: formData.facebook.trim() || '',
+//         facebookUrl: formData.facebookUrl.trim() || '',
+//         twitter: formData.twitter.trim() || '',
+//         twitterUrl: formData.twitterUrl.trim() || '',
+//         instagram: '',
+//         instagramUrl: '',
+//         // PayPal
+//         paypalTransaction: paymentData.transactionId,
+//         payerId: paymentData.payerId,
+//         paypalId: paymentData.orderId,
+//         clientName: paymentData.clientName,
+//         amount: Number(paymentData.amount),
+//         currency: paymentData.currency,
+//         state: paymentData.state,
+//         address: paymentData.address,
+//         liveUrl: '',
+//       };
+
+//       console.log('Sending payload:', payload);
+
+//       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(payload),
+//       });
+
+//       const result = await response.json();
+
+//       console.log('API response:', result);
+
+//       if (!response.ok) {
+//         throw new Error(result.message || 'Failed to submit infographic');
+//       }
+
+//       alert('Congratulations! Your infographic was submitted successfully.');
+
+//       // Reset everything AFTER successful submission
+//       resetForm();
+//       setPaymentData(null);
+//       setShowForm(false);
+//       setSubmitAttempt(false);
+//     } catch (error) {
+//       console.error('Error:', error);
+
+//       alert(error instanceof Error ? error.message : 'Something went wrong.');
+//     }
+//   };
+
+//   const resetForm = () => {
+//     setFormData({
+//       title: '',
+//       catId: '',
+//       email: '',
+//       description: '',
+//       imgUrl: editorImageUrl,
+
+//       facebook: '',
+//       facebookUrl: '',
+//       twitter: '',
+//       twitterUrl: '',
+//       instagram: '',
+//       instagramUrl: '',
+//       liveUrl: '',
+//     });
+
+//     setSubmitAttempt(false);
+//   };
+
+//   const [categories, setCategories] = useState<Category[]>([]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infographics`);
+
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch categories');
+//         }
+
+//         const data: Category[] = await response.json();
+
+//         setCategories(data.filter((item) => item.status === 1));
+//       } catch (error) {
+//         console.error(error);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+// useEffect(() => {
+//   if (!isPreviewOpen) return;
+
+//   const onKeyDown = (e: KeyboardEvent) => {
+//     if (e.key === 'Escape') setIsPreviewOpen(false);
+//   };
+
+//   document.body.style.overflow = 'hidden';
+//   window.addEventListener('keydown', onKeyDown);
+
+//   return () => {
+//     document.body.style.overflow = '';
+//     window.removeEventListener('keydown', onKeyDown);
+//   };
+// }, [isPreviewOpen]);
+//   return (
+//     <div className="flex-1 p-5">
+//       <div className="rounded-lg border border-gray-300 bg-white p-5">
+//         {/* Intro Section */}
+//         {!showForm && (
+//           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+//             <div className="lg:col-span-8">
+//               <h2 className="mb-4 text-[30px] font-bold text-cyan-600">Submit Infographics</h2>
+
+//               {/* Social Buttons */}
+//               <div className="mb-6 flex flex-wrap gap-2">
+//                 <PinterestShareButton url={shareUrl} media={media} description={title}>
+//                   <Image src="/assets/pinterest.svg" alt="Pinterest" width={50} height={32} className="cursor-pointer" />
+//                 </PinterestShareButton>
+
+//                 <FacebookShareButton url={shareUrl} hashtag="#Infographics">
+//                   <Image src="/assets/Facebook.svg" alt="Facebook" width={50} height={32} className="cursor-pointer" />
+//                 </FacebookShareButton>
+
+//                 <TwitterShareButton url={shareUrl} title={title} hashtags={['Infographics']}>
+//                   <Image src="/assets/twitter.svg" alt="Twitter" width={50} height={32} className="cursor-pointer" />
+//                 </TwitterShareButton>
+
+//                 <LinkedinShareButton url={shareUrl} title={title} summary="Submit your infographic to Infographics Posters.">
+//                   <Image src="/assets/linkedin.svg" alt="LinkedIn" width={50} height={32} className="cursor-pointer" />
+//                 </LinkedinShareButton>
+//               </div>
+
+//               <div className="space-y-4 text-[12px]">
+//                 <p>
+//                   Do you create infographics for fun? Or do you believe that infographics or information graphics are the best tools for
+//                   visual representation and interpretation of data, information and knowledge? Well, you will surely want to showcase your
+//                   creativity to the world. Well, go ahead and share your work with infographics posters. Submit your work here; we will
+//                   review your request for publishing.
+//                 </p>
+
+//                 <div>
+//                   <h3 className="font-semibold">Infographics</h3>
+//                   <p>
+//                     Infographics are gaining popularity as visual presentations of information as they not only make information easy to
+//                     interpret but also convey it in a fun and pleasing manner. An infographics poster may contain data, graphs, statistics
+//                     and images that are out together to convey some message or principle.
+//                   </p>
+//                 </div>
+
+//                 <div>
+//                   <h3 className="font-semibold">About Infographics Posters</h3>
+//                   <p>
+//                     Buzz around infographics is growing, so Infographics Posters provides a platform for infographic fans to come together
+//                     and share their work. Here, you will find infographics on diverse topics from food to travel, web designing to
+//                     technology, and fashion to gaming that are submitted by infographic creators like you.
+//                   </p>
+//                 </div>
+
+//                 <div>
+//                   <h3 className="font-semibold">Benefits of Submitting Posters</h3>
+//                   <p>
+//                     With Infographics Posters, you will not only get an opportunity of showcasing your creativity to the online audience,
+//                     but there are several other benefits too, which includes –
+//                   </p>
+//                   <ul className="list-disc pl-5 mt-2">
+//                     <li>You will get an SEO friendly link to your infographics page (author URL).</li>
+//                     <li>Your infographics can help in getting traffic to your site.</li>
+//                     <li>You can use your infographics poster for branding promotion.</li>
+//                   </ul>
+//                 </div>
+
+//                 <div>
+//                   <h3 className="font-semibold">Submitting Infographics Posters</h3>
+//                   <p>
+//                     Before publishing any infographics, we review it to make sure that it is fit to create the best possible user experience
+//                     for our visitors. So, for publishing your infographics with us, make sure it adheres to the following guidelines –
+//                   </p>
+//                   <ul className="list-disc pl-5 mt-2">
+//                     <li>It should not be based on subjects like porn and gambling.</li>
+//                     <li>It should not contain nudity or obscene images.</li>
+//                     <li>It must have short yet creative title.</li>
+//                     <li>
+//                       Description of the infographic should be around 100 words. Make sure that it is informative and explains the concept
+//                       behind your work.
+//                     </li>
+//                   </ul>
+//                 </div>
+
+//                 <div>
+//                   <h3 className="font-semibold">Payment Process and Publishing</h3>
+
+//                   <p>
+//                     After you make the payment of $30, you will be redirected to the infographics submission form. We will review your work
+//                     and publish it in 2 business days.
+//                   </p>
+//                 </div>
+
+//                 <p>Go ahead, let your infographics poster reveal your creativity!</p>
+//               </div>
+//             </div>
+
+//             {/* Payment Card */}
+
+//             <div className="lg:col-span-4">
+//               <div className="overflow-hidden rounded-lg border border-gray-300">
+//                 <div className="bg-gray-100 p-3 text-[12px] font-semibold">Now Pay Only $30</div>
+
+//                 <div className="p-4">
+//                   {isPaypalConfigured ? (
+//                     <>
+//                       <PayPalScriptProvider options={initialOptions}>
+//                         <CheckoutComponent
+//                           amount="30.00"
+//                           onPaymentSuccess={(payment) => {
+//                             setPaymentData(payment);
+//                             setShowForm(true);
+//                           }}
+//                         />
+//                       </PayPalScriptProvider>
+
+//                       <p className="mt-2 text-center text-sm">The safer, easier way to pay</p>
+//                     </>
+//                   ) : (
+//                     <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+//                       PayPal checkout is unavailable until a valid PayPal client ID is configured.
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Form Section */}
+//         {showForm && (
+//           <div>
+//             <h2 className="mb-2 text-3xl font-bold text-sky-500">Add New Infographics</h2>
+
+//             <p className="mb-6 text-[12px] text-black-500 font-medium">
+//               Send an email. Fields marked with
+//               <span className="text-red-500"> *</span> are required.
+//             </p>
+//             {/* {editorImageUrl && (
+//               <p className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+//                 Your canvas design is attached. Its image URL has been added to the submission form.
+//               </p>
+//             )} */}
+
+
+//             <div className="w-full">
+//               <form onSubmit={addNewArticle} className="mt-6">
+//                 {/* Title */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">
+//                     Title <span className="text-red-500">*</span>
+//                   </label>
+
+//                   <input
+//                     type="text"
+//                     id="title"
+//                     name="title"
+//                     value={formData.title}
+//                     onChange={handleChange}
+//                     placeholder="Title"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Category */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">
+//                     Category <span className="text-red-500">*</span>
+//                   </label>
+
+//                   <select
+//                     id="catId"
+//                     name="catId"
+//                     value={formData.catId}
+//                     onChange={handleChange}
+//                     className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+//                     <option value="" disabled>
+//                       Please select category
+//                     </option>
+
+//                     {categories.map((category) => (
+//                       <option key={category.catId} value={category.catId}>
+//                         {category.title}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+
+//                 {/* Email */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">
+//                     Email <span className="text-red-500">*</span>
+//                   </label>
+
+//                   <input
+//                     type="email"
+//                     id="email"
+//                     name="email"
+//                     value={formData.email}
+//                     onChange={handleChange}
+//                     placeholder="Email"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Description */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">
+//                     Description <span className="text-red-500">*</span>
+//                   </label>
+
+//                   <textarea
+//                     id="description"
+//                     name="description"
+//                     value={formData.description}
+//                     onChange={handleChange}
+//                     rows={2}
+//                     maxLength={300}
+//                     placeholder="Full description text"
+//                     className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Infographics URL */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">
+//                     Infographics URL <span className="text-red-500">*</span>
+//                   </label>
+
+//                   {/* <input
+//                     type="text"
+//                     id="imgUrl"
+//                     name="imgUrl"
+//                     value={formData.imgUrl}
+//                     onChange={handleChange}
+//                     placeholder="Image URL"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   /> */}
+//                   <input
+//                     type="text"
+//                     id="imgUrl"
+//                     name="imgUrl"
+//                     value={formData.imgUrl}
+//                     onChange={handleChange}
+//                     readOnly={Boolean(editorImageUrl)}
+//                     placeholder="Image URL"
+//                     className={`w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+//                       editorImageUrl ? 'cursor-not-allowed bg-gray-100 text-gray-600' : ''
+//                     }`}
+//                   />
+//                 </div>
+
+//                 {/* Facebook */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">Facebook</label>
+
+//                   <input
+//                     type="text"
+//                     id="facebook"
+//                     name="facebook"
+//                     value={formData.facebook}
+//                     onChange={handleChange}
+//                     placeholder="Facebook"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Facebook URL */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">Facebook URL</label>
+
+//                   <input
+//                     type="text"
+//                     id="facebookUrl"
+//                     name="facebookUrl"
+//                     value={formData.facebookUrl}
+//                     onChange={handleChange}
+//                     placeholder="Facebook URL"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Twitter */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">Twitter</label>
+
+//                   <input
+//                     type="text"
+//                     id="twitter"
+//                     name="twitter"
+//                     value={formData.twitter}
+//                     onChange={handleChange}
+//                     placeholder="Twitter"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Twitter URL */}
+//                 <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+//                   <label className="pt-2 text-sm font-medium text-gray-700">Twitter URL</label>
+
+//                   <input
+//                     type="text"
+//                     id="twitterUrl"
+//                     name="twitterUrl"
+//                     value={formData.twitterUrl}
+//                     onChange={handleChange}
+//                     placeholder="Twitter URL"
+//                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+//                   />
+//                 </div>
+
+//                 {/* Validation */}
+//                 {submitAttempt && (
+//                   <div className="mb-4 text-sm text-red-600">
+//                     All fields with an <span className="text-red-500">*</span> are required.
+//                   </div>
+//                 )}
+
+//                 {/* Buttons */}
+//                 <div className="mt-6 flex justify-center gap-3">
+//                   <button type="submit" className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700">
+//                     Add Article
+//                   </button>
+
+//                   <button
+//                     type="button"
+//                     onClick={resetForm}
+//                     className="rounded bg-gray-500 px-6 py-2 text-sm font-medium text-white hover:bg-gray-600">
+//                     Reset
+//                   </button>
+//                 </div>
+//               </form>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+
 'use client';
 
 import Image from 'next/image';
@@ -7,553 +567,619 @@ import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import CheckoutComponent from '../component/CheckoutComponent/CheckoutComponent';
 import { Category } from '../interfaces/category';
 
-export default function SubmitInfographics() {
-    const [showForm, setShowForm] = useState(false);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const normalizeImageUrl = (value?: string) => {
+  if (!value) return '';
 
-    const shareUrl = `${siteUrl}/submit-infographics.html`;
-    const title = 'Submit Infographics';
-    const media = `${siteUrl}/logo-infographics.png`;
+  const frontendOrigin = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!frontendOrigin) {
+    throw new Error('NEXT_PUBLIC_SITE_URL is required to normalize the infographic image URL.');
+  }
 
-    const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-    const isPaypalConfigured = Boolean(paypalClientId);
+  try {
+    const sourceUrl = new URL(value, frontendOrigin);
+    if (sourceUrl.protocol !== 'http:' && sourceUrl.protocol !== 'https:') return '';
 
-    const initialOptions = {
-        clientId: paypalClientId!,
-        currency: 'USD',
-        intent: 'capture',
-        'disable-funding': 'card'
-    };
+    const frontendUrl = new URL(frontendOrigin);
+    frontendUrl.pathname = sourceUrl.pathname;
+    frontendUrl.search = sourceUrl.search;
+    frontendUrl.hash = sourceUrl.hash;
 
-    const [submitAttempt, setSubmitAttempt] = useState(false);
+    return frontendUrl.toString();
+  } catch {
+    return '';
+  }
+};
 
-    const [formData, setFormData] = useState({
-        title: '',
-        catId: '',
-        email: '',
-        description: '',
-        imgUrl: '',
+export default function SubmitInfographics({ initialImageUrl }: Readonly<{ initialImageUrl?: string }>) {
+  const editorImageUrl = normalizeImageUrl(initialImageUrl);
+  const [showForm, setShowForm] = useState(false);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  const shareUrl = `${siteUrl}/submit-infographics.html`;
+  const title = 'Submit Infographics';
+  const media = `${siteUrl}/logo-infographics.png`;
+
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const isPaypalConfigured = Boolean(paypalClientId);
+
+  const initialOptions = {
+    'clientId': paypalClientId!,
+    'currency': 'USD',
+    'intent': 'capture',
+    'disable-funding': 'card',
+  };
+
+  const [submitAttempt, setSubmitAttempt] = useState(false);
+
+  // Canvas preview (lightbox) state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    catId: '',
+    email: '',
+    description: '',
+    imgUrl: editorImageUrl,
+    // Optional social fields
+    facebook: '',
+    facebookUrl: '',
+    twitter: '',
+    twitterUrl: '',
+    instagram: '',
+    instagramUrl: '',
+    // Optional
+    liveUrl: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setSubmitAttempt(false);
+  };
+
+  const [paymentData, setPaymentData] = useState<{
+    orderId: string;
+    payerId: string;
+    transactionId: string;
+    amount: string;
+    currency: string;
+    state: string;
+    address: string;
+    clientName: string;
+  } | null>(null);
+
+  const addNewArticle = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Payment is mandatory
+    if (!paymentData) {
+      alert('Please complete the payment first.');
+      return;
+    }
+
+    // PayPal transaction is mandatory
+    if (!paymentData.transactionId) {
+      alert('PayPal payment was not completed.');
+      return;
+    }
+
+    // Validate form
+    if (!formData.title.trim() || !formData.catId || !formData.email.trim() || !formData.description.trim() || !formData.imgUrl.trim()) {
+      setSubmitAttempt(true);
+      return;
+    }
+
+    // Everything is valid
+    setSubmitAttempt(false);
+
+    try {
+      const payload = {
+        title: formData.title.trim(),
+        catId: Number(formData.catId),
+        email: formData.email.trim(),
+        desc: formData.description.trim(),
+        imgUrl: formData.imgUrl.trim(),
         // Optional social fields
-        facebook: '',
-        facebookUrl: '',
-        twitter: '',
-        twitterUrl: '',
+        facebook: formData.facebook.trim() || '',
+        facebookUrl: formData.facebookUrl.trim() || '',
+        twitter: formData.twitter.trim() || '',
+        twitterUrl: formData.twitterUrl.trim() || '',
         instagram: '',
         instagramUrl: '',
-        // Optional
-        liveUrl: ''
+        // PayPal
+        paypalTransaction: paymentData.transactionId,
+        payerId: paymentData.payerId,
+        paypalId: paymentData.orderId,
+        clientName: paymentData.clientName,
+        amount: Number(paymentData.amount),
+        currency: paymentData.currency,
+        state: paymentData.state,
+        address: paymentData.address,
+        liveUrl: '',
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to submit infographic');
+      }
+
+      alert('Congratulations! Your infographic was submitted successfully.');
+
+      // Reset everything AFTER successful submission
+      resetForm();
+      setPaymentData(null);
+      setShowForm(false);
+      setSubmitAttempt(false);
+    } catch (error) {
+      console.error('Error:', error);
+
+      alert(error instanceof Error ? error.message : 'Something went wrong.');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      catId: '',
+      email: '',
+      description: '',
+      imgUrl: editorImageUrl,
+
+      facebook: '',
+      facebookUrl: '',
+      twitter: '',
+      twitterUrl: '',
+      instagram: '',
+      instagramUrl: '',
+      liveUrl: '',
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
+    setSubmitAttempt(false);
+  };
 
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value
-        }));
+  const [categories, setCategories] = useState<Category[]>([]);
 
-        setSubmitAttempt(false);
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infographics`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+
+        const data: Category[] = await response.json();
+
+        setCategories(data.filter((item) => item.status === 1));
+      } catch (error) {
+        console.error(error);
+      }
     };
 
-    const [paymentData, setPaymentData] = useState<{
-        orderId: string;
-        payerId: string;
-        transactionId: string;
-        amount: string;
-        currency: string;
-        state: string;
-        address: string;
-        clientName: string;
-    } | null>(null);
+    fetchCategories();
+  }, []);
 
-    const addNewArticle = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+  // Lightbox: close on Escape + lock page scroll while open
+  useEffect(() => {
+    if (!isPreviewOpen) return;
 
-        // Payment is mandatory
-        if (!paymentData) {
-            alert('Please complete the payment first.');
-            return;
-        }
-
-        // PayPal transaction is mandatory
-        if (!paymentData.transactionId) {
-            alert('PayPal payment was not completed.');
-            return;
-        }
-
-        // Validate form
-        if (
-            !formData.title.trim() ||
-            !formData.catId ||
-            !formData.email.trim() ||
-            !formData.description.trim() ||
-            !formData.imgUrl.trim()
-        ) {
-            setSubmitAttempt(true);
-            return;
-        }
-
-        // Everything is valid
-        setSubmitAttempt(false);
-
-        try {
-            const payload = {
-                title: formData.title.trim(),
-                catId: Number(formData.catId),
-                email: formData.email.trim(),
-                desc: formData.description.trim(),
-                imgUrl: formData.imgUrl.trim(),
-                // Optional social fields
-                facebook: formData.facebook.trim() || '',
-                facebookUrl: formData.facebookUrl.trim() || '',
-                twitter: formData.twitter.trim() || '',
-                twitterUrl: formData.twitterUrl.trim() || '',
-                instagram: '',
-                instagramUrl: '',
-                // PayPal
-                paypalTransaction: paymentData.transactionId,
-                payerId: paymentData.payerId,
-                paypalId: paymentData.orderId,
-                clientName: paymentData.clientName,
-                amount: Number(paymentData.amount),
-                currency: paymentData.currency,
-                state: paymentData.state,
-                address: paymentData.address,
-                liveUrl: ''
-            };
-
-            console.log('Sending payload:', payload);
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-
-            console.log('API response:', result);
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Failed to submit infographic');
-            }
-
-            alert('Congratulations! Your infographic was submitted successfully.');
-
-            // Reset everything AFTER successful submission
-            resetForm();
-            setPaymentData(null);
-            setShowForm(false);
-            setSubmitAttempt(false);
-        } catch (error) {
-            console.error('Error:', error);
-
-            alert(error instanceof Error ? error.message : 'Something went wrong.');
-        }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsPreviewOpen(false);
     };
 
-    const resetForm = () => {
-        setFormData({
-            title: '',
-            catId: '',
-            email: '',
-            description: '',
-            imgUrl: '',
-            facebook: '',
-            facebookUrl: '',
-            twitter: '',
-            twitterUrl: '',
-            instagram: '',
-            instagramUrl: '',
-            liveUrl: ''
-        });
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
 
-        setSubmitAttempt(false);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
     };
+  }, [isPreviewOpen]);
 
-    const [categories, setCategories] = useState<Category[]>([]);
+  return (
+    <div className="flex-1 p-5">
+      <div className="rounded-lg border border-gray-300 bg-white p-5">
+        {/* Intro Section */}
+        {!showForm && (
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-8">
+              <h2 className="mb-4 text-[30px] font-bold text-cyan-600">Submit Infographics</h2>
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infographics`);
+              {/* Social Buttons */}
+              <div className="mb-6 flex flex-wrap gap-2">
+                <PinterestShareButton url={shareUrl} media={media} description={title}>
+                  <Image src="/assets/pinterest.svg" alt="Pinterest" width={50} height={32} className="cursor-pointer" />
+                </PinterestShareButton>
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch categories');
-                }
+                <FacebookShareButton url={shareUrl} hashtag="#Infographics">
+                  <Image src="/assets/Facebook.svg" alt="Facebook" width={50} height={32} className="cursor-pointer" />
+                </FacebookShareButton>
 
-                const data: Category[] = await response.json();
+                <TwitterShareButton url={shareUrl} title={title} hashtags={['Infographics']}>
+                  <Image src="/assets/twitter.svg" alt="Twitter" width={50} height={32} className="cursor-pointer" />
+                </TwitterShareButton>
 
-                setCategories(data.filter((item) => item.status === 1));
-            } catch (error) {
-                console.error(error);
-            }
-        };
+                <LinkedinShareButton url={shareUrl} title={title} summary="Submit your infographic to Infographics Posters.">
+                  <Image src="/assets/linkedin.svg" alt="LinkedIn" width={50} height={32} className="cursor-pointer" />
+                </LinkedinShareButton>
+              </div>
 
-        fetchCategories();
-    }, []);
+              <div className="space-y-4 text-[12px]">
+                <p>
+                  Do you create infographics for fun? Or do you believe that infographics or information graphics are the best tools for
+                  visual representation and interpretation of data, information and knowledge? Well, you will surely want to showcase your
+                  creativity to the world. Well, go ahead and share your work with infographics posters. Submit your work here; we will
+                  review your request for publishing.
+                </p>
 
-    return (
-        <div className="flex-1 p-5">
-            <div className="rounded-lg border border-gray-300 bg-white p-5">
-                {/* Intro Section */}
-                {!showForm && (
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-                        <div className="lg:col-span-8">
-                            <h2 className="mb-4 text-[30px] font-bold text-cyan-600">Submit Infographics</h2>
+                <div>
+                  <h3 className="font-semibold">Infographics</h3>
+                  <p>
+                    Infographics are gaining popularity as visual presentations of information as they not only make information easy to
+                    interpret but also convey it in a fun and pleasing manner. An infographics poster may contain data, graphs, statistics
+                    and images that are out together to convey some message or principle.
+                  </p>
+                </div>
 
-                            {/* Social Buttons */}
-                            <div className="mb-6 flex flex-wrap gap-2">
-                                <PinterestShareButton url={shareUrl} media={media} description={title}>
-                                    <Image
-                                        src="/assets/pinterest.svg"
-                                        alt="Pinterest"
-                                        width={50}
-                                        height={32}
-                                        className="cursor-pointer"
-                                    />
-                                </PinterestShareButton>
+                <div>
+                  <h3 className="font-semibold">About Infographics Posters</h3>
+                  <p>
+                    Buzz around infographics is growing, so Infographics Posters provides a platform for infographic fans to come together
+                    and share their work. Here, you will find infographics on diverse topics from food to travel, web designing to
+                    technology, and fashion to gaming that are submitted by infographic creators like you.
+                  </p>
+                </div>
 
-                                <FacebookShareButton url={shareUrl} hashtag="#Infographics">
-                                    <Image
-                                        src="/assets/Facebook.svg"
-                                        alt="Facebook"
-                                        width={50}
-                                        height={32}
-                                        className="cursor-pointer"
-                                    />
-                                </FacebookShareButton>
+                <div>
+                  <h3 className="font-semibold">Benefits of Submitting Posters</h3>
+                  <p>
+                    With Infographics Posters, you will not only get an opportunity of showcasing your creativity to the online audience,
+                    but there are several other benefits too, which includes –
+                  </p>
+                  <ul className="list-disc pl-5 mt-2">
+                    <li>You will get an SEO friendly link to your infographics page (author URL).</li>
+                    <li>Your infographics can help in getting traffic to your site.</li>
+                    <li>You can use your infographics poster for branding promotion.</li>
+                  </ul>
+                </div>
 
-                                <TwitterShareButton url={shareUrl} title={title} hashtags={['Infographics']}>
-                                    <Image
-                                        src="/assets/twitter.svg"
-                                        alt="Twitter"
-                                        width={50}
-                                        height={32}
-                                        className="cursor-pointer"
-                                    />
-                                </TwitterShareButton>
+                <div>
+                  <h3 className="font-semibold">Submitting Infographics Posters</h3>
+                  <p>
+                    Before publishing any infographics, we review it to make sure that it is fit to create the best possible user experience
+                    for our visitors. So, for publishing your infographics with us, make sure it adheres to the following guidelines –
+                  </p>
+                  <ul className="list-disc pl-5 mt-2">
+                    <li>It should not be based on subjects like porn and gambling.</li>
+                    <li>It should not contain nudity or obscene images.</li>
+                    <li>It must have short yet creative title.</li>
+                    <li>
+                      Description of the infographic should be around 100 words. Make sure that it is informative and explains the concept
+                      behind your work.
+                    </li>
+                  </ul>
+                </div>
 
-                                <LinkedinShareButton
-                                    url={shareUrl}
-                                    title={title}
-                                    summary="Submit your infographic to Infographics Posters."
-                                >
-                                    <Image
-                                        src="/assets/linkedin.svg"
-                                        alt="LinkedIn"
-                                        width={50}
-                                        height={32}
-                                        className="cursor-pointer"
-                                    />
-                                </LinkedinShareButton>
-                            </div>
+                <div>
+                  <h3 className="font-semibold">Payment Process and Publishing</h3>
 
-                            <div className="space-y-4 text-[12px]">
-                                <p>
-                                    Do you create infographics for fun? Or do you believe that infographics or
-                                    information graphics are the best tools for visual representation and interpretation
-                                    of data, information and knowledge? Well, you will surely want to showcase your
-                                    creativity to the world. Well, go ahead and share your work with infographics
-                                    posters. Submit your work here; we will review your request for publishing.
-                                </p>
+                  <p>
+                    After you make the payment of $30, you will be redirected to the infographics submission form. We will review your work
+                    and publish it in 2 business days.
+                  </p>
+                </div>
 
-                                <div>
-                                    <h3 className="font-semibold">Infographics</h3>
-                                    <p>
-                                        Infographics are gaining popularity as visual presentations of information as
-                                        they not only make information easy to interpret but also convey it in a fun and
-                                        pleasing manner. An infographics poster may contain data, graphs, statistics and
-                                        images that are out together to convey some message or principle.
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold">About Infographics Posters</h3>
-                                    <p>
-                                        Buzz around infographics is growing, so Infographics Posters provides a platform
-                                        for infographic fans to come together and share their work. Here, you will find
-                                        infographics on diverse topics from food to travel, web designing to technology,
-                                        and fashion to gaming that are submitted by infographic creators like you.
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold">Benefits of Submitting Posters</h3>
-                                    <p>
-                                        With Infographics Posters, you will not only get an opportunity of showcasing
-                                        your creativity to the online audience, but there are several other benefits
-                                        too, which includes –
-                                    </p>
-                                    <ul className="list-disc pl-5 mt-2">
-                                        <li>
-                                            You will get an SEO friendly link to your infographics page (author URL).
-                                        </li>
-                                        <li>Your infographics can help in getting traffic to your site.</li>
-                                        <li>You can use your infographics poster for branding promotion.</li>
-                                    </ul>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold">Submitting Infographics Posters</h3>
-                                    <p>
-                                        Before publishing any infographics, we review it to make sure that it is fit to
-                                        create the best possible user experience for our visitors. So, for publishing
-                                        your infographics with us, make sure it adheres to the following guidelines –
-                                    </p>
-                                    <ul className="list-disc pl-5 mt-2">
-                                        <li>It should not be based on subjects like porn and gambling.</li>
-                                        <li>It should not contain nudity or obscene images.</li>
-                                        <li>It must have short yet creative title.</li>
-                                        <li>
-                                            Description of the infographic should be around 100 words. Make sure that it
-                                            is informative and explains the concept behind your work.
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold">Payment Process and Publishing</h3>
-
-                                    <p>
-                                        After you make the payment of $30, you will be redirected to the infographics
-                                        submission form. We will review your work and publish it in 2 business days.
-                                    </p>
-                                </div>
-
-                                <p>Go ahead, let your infographics poster reveal your creativity!</p>
-                            </div>
-                        </div>
-
-                        {/* Payment Card */}
-
-                        <div className="lg:col-span-4">
-                            <div className="overflow-hidden rounded-lg border border-gray-300">
-                                <div className="bg-gray-100 p-3 text-[12px] font-semibold">Now Pay Only $30</div>
-
-                                <div className="p-4">
-                                    {isPaypalConfigured ? (
-                                        <>
-                                            <PayPalScriptProvider options={initialOptions}>
-                                                <CheckoutComponent
-                                                    amount="30.00"
-                                                    onPaymentSuccess={(payment) => {
-                                                        setPaymentData(payment);
-                                                        setShowForm(true);
-                                                    }}
-                                                />
-                                            </PayPalScriptProvider>
-
-                                            <p className="mt-2 text-center text-sm">The safer, easier way to pay</p>
-                                        </>
-                                    ) : (
-                                        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-                                            PayPal checkout is unavailable until a valid PayPal client ID is configured.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Form Section */}
-                {showForm && (
-                    <div>
-                        <h2 className="mb-2 text-3xl font-bold text-sky-500">Add New Infographics</h2>
-
-                        <p className="mb-6 text-[12px] text-black-500 font-medium">
-                            Send an email. Fields marked with
-                            <span className="text-red-500"> *</span> are required.
-                        </p>
-
-                        <div className="w-full">
-                            <form onSubmit={addNewArticle} className="mt-6">
-                                {/* Title */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">
-                                        Title <span className="text-red-500">*</span>
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        id="title"
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleChange}
-                                        placeholder="Title"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Category */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">
-                                        Category <span className="text-red-500">*</span>
-                                    </label>
-
-                                    <select
-                                        id="catId"
-                                        name="catId"
-                                        value={formData.catId}
-                                        onChange={handleChange}
-                                        className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    >
-                                        <option value="" disabled>
-                                            Please select category
-                                        </option>
-
-                                        {categories.map((category) => (
-                                            <option key={category.catId} value={category.catId}>
-                                                {category.title}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Email */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">
-                                        Email <span className="text-red-500">*</span>
-                                    </label>
-
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        placeholder="Email"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Description */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">
-                                        Description <span className="text-red-500">*</span>
-                                    </label>
-
-                                    <textarea
-                                        id="description"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                        rows={2}
-                                        maxLength={300}
-                                        placeholder="Full description text"
-                                        className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Infographics URL */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">
-                                        Infographics URL <span className="text-red-500">*</span>
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        id="imgUrl"
-                                        name="imgUrl"
-                                        value={formData.imgUrl}
-                                        onChange={handleChange}
-                                        placeholder="Image URL"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Facebook */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">Facebook</label>
-
-                                    <input
-                                        type="text"
-                                        id="facebook"
-                                        name="facebook"
-                                        value={formData.facebook}
-                                        onChange={handleChange}
-                                        placeholder="Facebook"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Facebook URL */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">Facebook URL</label>
-
-                                    <input
-                                        type="text"
-                                        id="facebookUrl"
-                                        name="facebookUrl"
-                                        value={formData.facebookUrl}
-                                        onChange={handleChange}
-                                        placeholder="Facebook URL"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Twitter */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">Twitter</label>
-
-                                    <input
-                                        type="text"
-                                        id="twitter"
-                                        name="twitter"
-                                        value={formData.twitter}
-                                        onChange={handleChange}
-                                        placeholder="Twitter"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Twitter URL */}
-                                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
-                                    <label className="pt-2 text-sm font-medium text-gray-700">Twitter URL</label>
-
-                                    <input
-                                        type="text"
-                                        id="twitterUrl"
-                                        name="twitterUrl"
-                                        value={formData.twitterUrl}
-                                        onChange={handleChange}
-                                        placeholder="Twitter URL"
-                                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                {/* Validation */}
-                                {submitAttempt && (
-                                    <div className="mb-4 text-sm text-red-600">
-                                        All fields with an <span className="text-red-500">*</span> are required.
-                                    </div>
-                                )}
-
-                                {/* Buttons */}
-                                <div className="mt-6 flex justify-center gap-3">
-                                    <button
-                                        type="submit"
-                                        className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                                    >
-                                        Add Article
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={resetForm}
-                                        className="rounded bg-gray-500 px-6 py-2 text-sm font-medium text-white hover:bg-gray-600"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
+                <p>Go ahead, let your infographics poster reveal your creativity!</p>
+              </div>
             </div>
-        </div>
-    );
+
+            {/* Payment Card */}
+
+            <div className="lg:col-span-4">
+              <div className="overflow-hidden rounded-lg border border-gray-300">
+                <div className="bg-gray-100 p-3 text-[12px] font-semibold">Now Pay Only $30</div>
+
+                <div className="p-4">
+                  {isPaypalConfigured ? (
+                    <>
+                      <PayPalScriptProvider options={initialOptions}>
+                        <CheckoutComponent
+                          amount="30.00"
+                          onPaymentSuccess={(payment) => {
+                            setPaymentData(payment);
+                            setShowForm(true);
+                          }}
+                        />
+                      </PayPalScriptProvider>
+
+                      <p className="mt-2 text-center text-sm">The safer, easier way to pay</p>
+                    </>
+                  ) : (
+                    <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                      PayPal checkout is unavailable until a valid PayPal client ID is configured.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Form Section */}
+        {showForm && (
+          <div>
+            <h2 className="mb-2 text-3xl font-bold text-sky-500">Submit Your Infographic</h2>
+
+            <p className="mb-6 text-sm text-gray-500">
+              Payment received. Complete the details below to finish your submission. Fields marked with
+              <span className="text-red-500"> *</span> are required.
+            </p>
+
+            {/* Canvas design bar (canvas flow only) */}
+            {editorImageUrl && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-400/30 bg-slate-500/5 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Canvas design attached</p>
+                    <p className="text-xs text-gray-500">No image upload needed. Your design will be submitted automatically.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-sky-500/50 px-3 py-1.5 text-sm font-semibold text-sky-500 transition hover:bg-sky-500 hover:text-white">
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10 3C5 3 1.7 7.1 1 10c.7 2.9 4 7 9 7s8.3-4.1 9-7c-.7-2.9-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                  </svg>
+                  Preview
+                </button>
+              </div>
+            )}
+
+            {/* Full-size lightbox (canvas flow only) */}
+            {editorImageUrl && isPreviewOpen && (
+              <div
+                className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm"
+                onClick={() => setIsPreviewOpen(false)}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Full size preview">
+                {/* Sticky top bar */}
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-5 py-4">
+                  <span className="text-sm font-medium text-white/80">
+                    Design preview {imgSize ? ` · ${imgSize.w} × ${imgSize.h}px` : ''}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(false)}
+                    className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/20">
+                    ✕ Close
+                  </button>
+                </div>
+
+                <div className="flex justify-center px-4 pb-10">
+                  {/* Plain <img> avoids next/image remote-domain config for the temp canvas URL */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={editorImageUrl}
+                    alt="Canvas design full size"
+                    className="h-auto w-full max-w-[860px] rounded-lg bg-white shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                    onLoad={(e) => setImgSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="w-full">
+              <form onSubmit={addNewArticle} className="mt-6">
+                {/* Title */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    placeholder="Title"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Category */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+
+                  <select
+                    id="catId"
+                    name="catId"
+                    value={formData.catId}
+                    onChange={handleChange}
+                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <option value="" disabled>
+                      Please select category
+                    </option>
+
+                    {categories.map((category) => (
+                      <option key={category.catId} value={category.catId}>
+                        {category.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Email */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Email"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={2}
+                    maxLength={300}
+                    placeholder="Full description text"
+                    className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Infographics URL (locked when it comes from the canvas) */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">
+                    Infographics URL <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    type="text"
+                    id="imgUrl"
+                    name="imgUrl"
+                    value={formData.imgUrl}
+                    onChange={handleChange}
+                    readOnly={Boolean(editorImageUrl)}
+                    placeholder="Image URL"
+                    className={`w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+                      editorImageUrl ? 'cursor-not-allowed bg-gray-100 text-gray-600' : ''
+                    }`}
+                  />
+                </div>
+
+                {/* Facebook */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">Facebook</label>
+
+                  <input
+                    type="text"
+                    id="facebook"
+                    name="facebook"
+                    value={formData.facebook}
+                    onChange={handleChange}
+                    placeholder="Facebook"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Facebook URL */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">Facebook URL</label>
+
+                  <input
+                    type="text"
+                    id="facebookUrl"
+                    name="facebookUrl"
+                    value={formData.facebookUrl}
+                    onChange={handleChange}
+                    placeholder="Facebook URL"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Twitter */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">Twitter</label>
+
+                  <input
+                    type="text"
+                    id="twitter"
+                    name="twitter"
+                    value={formData.twitter}
+                    onChange={handleChange}
+                    placeholder="Twitter"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Twitter URL */}
+                <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-[16.666667%_83.333333%]">
+                  <label className="pt-2 text-sm font-medium text-gray-700">Twitter URL</label>
+
+                  <input
+                    type="text"
+                    id="twitterUrl"
+                    name="twitterUrl"
+                    value={formData.twitterUrl}
+                    onChange={handleChange}
+                    placeholder="Twitter URL"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Validation */}
+                {submitAttempt && (
+                  <div className="mb-4 text-sm text-red-600">
+                    All fields with an <span className="text-red-500">*</span> are required.
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="mt-6 flex justify-center gap-3">
+                  <button type="submit" className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    Submit Infographic
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="rounded bg-gray-500 px-6 py-2 text-sm font-medium text-white hover:bg-gray-600">
+                    Reset
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

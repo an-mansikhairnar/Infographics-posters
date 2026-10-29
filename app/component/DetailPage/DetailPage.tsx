@@ -160,7 +160,7 @@ export default function DetailPage() {
     <div className='container mx-5 my-6 rounded border border-gray-300 bg-white p-6'>
 
       {/* Horizontal Ad Unit (InfographicsHorizontalAd) */}
-    <div className="w-full my-4 flex justify-center overflow-x-auto">
+    <div className="ad-slot w-full my-4 flex justify-center overflow-x-auto">
       <GoogleAds
         adSlot="8300554865"
         style={{ display: 'inline-block', width: '728px', height: '90px' }}
@@ -177,13 +177,6 @@ export default function DetailPage() {
           <strong>Hits:</strong> {article.hits}
         </p>
       </div>
-
-      {/* <div className='mb-6 flex flex-wrap gap-2'>
-        <Image src='/assets/pinterest.svg' alt='Pinterest' width={50} height={32} />
-        <Image src='/assets/Facebook.svg' alt='Facebook' width={50} height={32} />
-        <Image src='/assets/twitter.svg' alt='Twitter' width={50} height={32} />
-        <Image src='/assets/linkedin.svg' alt='LinkedIn' width={50} height={32} />
-      </div> */}
 
       <div className="mb-6 flex flex-wrap gap-2">
     <a

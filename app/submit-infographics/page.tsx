@@ -13,6 +13,13 @@ export const metadata = {
   },
 };
 
-export default function Page() {
-  return <SubmitInfographics />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ temp_image?: string | string[] }>;
+}) {
+  const { temp_image } = await searchParams;
+  const initialImageUrl = Array.isArray(temp_image) ? temp_image[0] : temp_image;
+
+  return <SubmitInfographics initialImageUrl={initialImageUrl} />;
 }

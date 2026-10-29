@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Canvas, FabricObject, Group } from 'fabric';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { CUSTOM_PROPS, MAX_PAGE_HEIGHT } from '@/lib/infographic/constants';
+import { CUSTOM_PROPS, FONTS, MAX_PAGE_HEIGHT } from '@/lib/infographic/constants';
+import { assertDesignEditScope } from '@/lib/infographic/designEditGuard';
+import type { ChatOperation } from '@/lib/infographic/designEditOperations';
+import { resolveEditConversation } from '@/lib/infographic/designEditConversation';
+import { THEMES } from '@/lib/infographic/aiCompiler';
 import { applyBackground, applyFx, applyLock, buildTemplate, createObject } from '@/lib/infographic/factory';
 import { buildChart } from '@/lib/infographic/charts';
 import { collectFonts, ensureFonts, injectFonts } from '@/lib/infographic/fonts';
@@ -14,6 +18,7 @@ import type { FabricApi } from '@/lib/infographic/types';
 import TopBar from './TopBar';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
+import DesignChat, { DesignChatButton, type ChatMessage } from './DesignChat';
 import type { EditorApi, EditorDocument, EditorStatus, InfographicObject } from './interfaces';
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -45,6 +50,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
     clipRef = useRef<FabricObject | null>(null);
   const hist = useRef<HistoryState>({ stack: [], idx: -1, lock: false });
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
+  const chatBaselineRef = useRef<{ token: string; signature: string } | null>(null);
   const apiRef = useRef<EditorApi | null>(null);
 
   const [ready, setReady] = useState(false);
@@ -56,6 +62,8 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
   const [status, setStatus] = useState<EditorStatus>('saved');
   const [flags, setFlags] = useState<EditorFlags>({ undo: false, redo: false });
   const [toast, setToast] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const say = useCallback((msg: string) => {
     setToast(msg);
@@ -884,6 +892,461 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
     apiRef.current = api;
   });
 
+  const sendDesignChatMessage = async (prompt: string, history: ChatMessage[]) => {
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiOrigin) throw new Error('The design assistant is not configured. Please contact support.');
+    const c = canvasRef.current;
+    if (!c) throw new Error('The editor is still loading. Please try again.');
+    const conversation = resolveEditConversation(prompt, history);
+    const scopePrompt = conversation.prompt;
+
+    const signature = JSON.stringify({
+      doc: { width: docRef.current.width, height: docRef.current.height, bg: docRef.current.bg },
+      data: serializeCanvas(),
+    });
+    const revision = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    chatBaselineRef.current = { token: revision, signature };
+    const canvasObjects = c.getObjects();
+    const selectedObjects = new Set(c.getActiveObjects());
+    const design = {
+      name: docRef.current.name,
+      width: docRef.current.width,
+      height: docRef.current.height,
+      background: docRef.current.bg.c1,
+      objects: canvasObjects.map((object) => {
+        const item = object as InfographicObject;
+        return {
+          type: item.type || 'object',
+          name: item.name || '',
+          text: typeof item.text === 'string' ? item.text.slice(0, 500) : '',
+          fill: typeof item.fill === 'string' ? item.fill : '',
+          fontSize: Number.isFinite(item.fontSize) ? item.fontSize : null,
+          fontFamily: item.fontFamily || '',
+          fontWeight: item.fontWeight || '',
+          fontStyle: item.fontStyle || 'normal',
+          underline: Boolean(item.underline),
+          linethrough: Boolean(item.linethrough),
+          textAlign: item.textAlign || '',
+          opacity: Number.isFinite(item.opacity) ? item.opacity : 1,
+          angle: Number.isFinite(item.angle) ? item.angle : 0,
+          left: Number.isFinite(item.left) ? item.left : 0,
+          top: Number.isFinite(item.top) ? item.top : 0,
+          width: Number.isFinite(item.getScaledWidth()) ? item.getScaledWidth() : 0,
+          height: Number.isFinite(item.getScaledHeight()) ? item.getScaledHeight() : 0,
+          locked: Boolean(item.locked),
+          selected: selectedObjects.has(object),
+        };
+      }),
+    };
+    const response = await fetch(`${apiOrigin.replace(/\/$/, '')}/api/ai/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: scopePrompt, history: conversation.history, design }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof result.error === 'string' ? result.error : 'The design assistant could not respond. Please try again.');
+    }
+    if (typeof result.inScope !== 'boolean' || typeof result.reply !== 'string' || !Array.isArray(result.operations)) {
+      throw new Error('The design assistant returned an invalid response. Please try again.');
+    }
+    if (!result.inScope || result.operations.length === 0) {
+      return { inScope: result.inScope, reply: result.reply, operations: [], preview: [], revision, scopePrompt };
+    }
+    if (result.operations.some((operation: unknown) => !operation || typeof operation !== 'object' || !('type' in operation))) {
+      throw new Error('The assistant proposed invalid design changes. Nothing was changed.');
+    }
+    const operations = result.operations as ChatOperation[];
+    const previewItems = operations.map((operation) => {
+      if (operation.type === 'update_object') {
+        const target = design.objects[operation.index];
+        const label = target?.text || target?.name || `${target?.type || 'item'} ${operation.index + 1}`;
+        const oldValues: Record<string, string | number | boolean> = {
+          text: target?.text || '',
+          fill: target?.fill || '',
+          fontSize: target?.fontSize || 'default',
+          fontFamily: target?.fontFamily || 'default',
+          fontWeight: target?.fontWeight || 'default',
+          fontStyle: target?.fontStyle || 'normal',
+          underline: Boolean(target?.underline),
+          linethrough: Boolean(target?.linethrough),
+          textAlign: target?.textAlign || 'default',
+          opacity: target?.opacity ?? 1,
+          angle: target?.angle ?? 0,
+          left: target?.left ?? 0,
+          top: target?.top ?? 0,
+        };
+        const propertyNames: Record<string, string> = {
+          text: 'Text',
+          fill: 'Color',
+          fontSize: 'Font size',
+          fontFamily: 'Font',
+          fontWeight: 'Font weight',
+          fontStyle: 'Style',
+          underline: 'Underline',
+          linethrough: 'Strikethrough',
+          textAlign: 'Alignment',
+          opacity: 'Opacity',
+          angle: 'Rotation',
+          left: 'Left position',
+          top: 'Top position',
+        };
+        const changes = Object.entries(operation.properties)
+          .map(([key, value]) => {
+            const before = oldValues[key] ?? 'default';
+            const format = (item: string | number | boolean) => key === 'text' ? `“${item}”` : String(item);
+            return `${propertyNames[key] || key}: ${format(before)} → ${format(String(value))}`;
+          })
+          .join(', ');
+        return `“${label.slice(0, 60)}”: ${changes || 'no properties specified'}`;
+      }
+      if (operation.type === 'delete_object') {
+        const target = design.objects[operation.index];
+        return `Delete “${(target?.text || target?.name || `item ${operation.index + 1}`).slice(0, 60)}”`;
+      }
+      if (operation.type === 'scale_object') {
+        const target = design.objects[operation.index];
+        const label = target?.text || target?.name || `${target?.type || 'item'} ${operation.index + 1}`;
+        return `Resize “${label.slice(0, 60)}” by ${Math.round((operation.factor - 1) * 100)}%`;
+      }
+      if (operation.type === 'add_text') return `Add text: “${operation.text.slice(0, 80)}”`;
+      if (operation.type === 'set_background') return `Set page background to ${operation.color}`;
+      if (operation.type === 'resize_page') return `Resize page to ${operation.width ?? design.width} × ${operation.height ?? design.height}`;
+      if (operation.type === 'set_theme') return `Apply the ${THEMES[operation.theme].name} theme while keeping existing content and layout`;
+      if (operation.type === 'apply_template') return `Replace the current design with the “${operation.templateId}” layout`;
+      if (operation.type === 'arrange_objects') return `Arrange ${operation.indexes.length} objects into a ${operation.layout} layout`;
+      if (operation.type === 'update_many') {
+        const property = Object.entries(operation.properties).map(([key, value]) => `${key}: ${String(value)}`).join(', ');
+        return `Change ${operation.indexes.length} selected items (${property})`;
+      }
+      throw new Error('The assistant proposed an unsupported design change. Nothing was changed.');
+    });
+    const preview = previewItems.length > 8
+      ? [...previewItems.slice(0, 8), `…and ${previewItems.length - 8} more changes`]
+      : previewItems;
+    return { inScope: result.inScope, reply: result.reply, operations, preview, revision, scopePrompt };
+  };
+
+  const applyAIEditOperations = async (operations: ChatOperation[], prompt: string, revision: string) => {
+    const c = canvasRef.current;
+    const F = Fref.current;
+    if (!c || !F) throw new Error('Could not apply the requested design changes.');
+    const baseline = chatBaselineRef.current;
+    if (!baseline || baseline.token !== revision) throw new Error('This preview has expired. Send your request again.');
+    const currentSignature = JSON.stringify({
+      doc: { width: docRef.current.width, height: docRef.current.height, bg: docRef.current.bg },
+      data: serializeCanvas(),
+    });
+    if (baseline.signature !== currentSignature) throw new Error('The design changed while the assistant was preparing edits. Nothing was changed; please send the request again.');
+
+    const expandedOperations = operations.flatMap((operation) =>
+      operation.type === 'update_many'
+        ? operation.indexes.map((index) => ({ type: 'update_object' as const, index, properties: operation.properties }))
+        : [operation]
+    );
+    const objects = c.getObjects();
+    const fontNames: string[] = [];
+    const additions: FabricObject[] = [];
+    const isHexColor = (value: string) => /^#[\da-f]{6}$/i.test(value);
+    const isAvailableFont = (value: string) => FONTS.some(({ n }) => n === value);
+    assertDesignEditScope(prompt, expandedOperations, objects as InfographicObject[], { userApproved: true });
+
+    if (operations.some((operation) => operation.type === 'apply_template') && operations.length !== 1) {
+      throw new Error('A template replacement cannot be combined with other design edits.');
+    }
+    const templateChange = operations.find((operation) => operation.type === 'apply_template');
+    if (templateChange?.type === 'apply_template') {
+      const template = getTemplate(templateChange.templateId);
+      if (!template) throw new Error('The requested layout is not available.');
+      hist.current.lock = true;
+      try {
+        c.discardActiveObject();
+        c.clear();
+        await ensureFonts(
+          template.objects
+            .map((object) => object.fontFamily)
+            .filter((font): font is string => Boolean(font))
+            .concat(['Inter', 'Poppins', 'Playfair Display'])
+        );
+        setDoc({ width: template.width, height: template.height, bg: template.bg });
+        layout();
+        await buildTemplate(F, c, template);
+        metaRef.current.templateId = template.id;
+      } finally {
+        hist.current.lock = false;
+      }
+      commit(true);
+      fit();
+      sync();
+      chatBaselineRef.current = null;
+      say(`Applied the ${template.name} layout.`);
+      return;
+    }
+    for (const operation of operations) {
+      if (operation.type === 'scale_object') {
+        if (!Number.isInteger(operation.index) || operation.index < 0 || operation.index >= objects.length) {
+          throw new Error('The assistant referenced an item that no longer exists. Please try again.');
+        }
+        const target = objects[operation.index] as InfographicObject;
+        if (target.locked) throw new Error('The assistant cannot edit locked design items.');
+        if (!Number.isFinite(operation.factor) || operation.factor < 0.1 || operation.factor > 10) {
+          throw new Error('The assistant returned an invalid item size.');
+        }
+        const scaledWidth = target.getScaledWidth() * operation.factor;
+        const scaledHeight = target.getScaledHeight() * operation.factor;
+        if (scaledWidth > docRef.current.width || scaledHeight > docRef.current.height) {
+          throw new Error('The requested item size does not fit within the page.');
+        }
+      }
+      if (operation.type === 'arrange_objects' &&
+        (operation.indexes.length < 2 ||
+          operation.indexes.some((index) => !Number.isInteger(index) || index < 0 || index >= objects.length || (objects[index] as InfographicObject).locked) ||
+          (operation.gap !== undefined && (!Number.isFinite(operation.gap) || operation.gap < 0 || operation.gap > 300)))) {
+        throw new Error('The assistant returned an invalid section layout. Nothing was changed.');
+      }
+    }
+
+    for (const operation of expandedOperations) {
+      if (operation.type === 'update_object' || operation.type === 'delete_object') {
+        if (!Number.isInteger(operation.index) || operation.index < 0 || operation.index >= objects.length) {
+          throw new Error('The assistant referenced an item that no longer exists. Please try again.');
+        }
+        const target = objects[operation.index] as InfographicObject;
+        if (target.locked) throw new Error('The assistant cannot edit locked design items.');
+        if (operation.type === 'update_object') {
+          const props = operation.properties;
+          if (props.text !== undefined && (typeof props.text !== 'string' || props.text.length > 500)) throw new Error('The assistant returned invalid text.');
+          if (props.text !== undefined && !/text/i.test(target.type || '')) throw new Error('Text edits can only be applied to text items.');
+          if (props.fill !== undefined && !isHexColor(props.fill)) throw new Error('The assistant returned an invalid color.');
+          if (props.fontSize !== undefined && (!Number.isFinite(props.fontSize) || props.fontSize < 8 || props.fontSize > 180)) throw new Error('The assistant returned an invalid font size.');
+          if (props.opacity !== undefined && (!Number.isFinite(props.opacity) || props.opacity < 0 || props.opacity > 1)) throw new Error('The assistant returned an invalid opacity.');
+          if (props.angle !== undefined && (!Number.isFinite(props.angle) || props.angle < -360 || props.angle > 360)) throw new Error('The assistant returned an invalid angle.');
+          if ((props.left !== undefined && !Number.isFinite(props.left)) || (props.top !== undefined && !Number.isFinite(props.top))) {
+            throw new Error('The assistant returned an invalid position.');
+          }
+          if (props.fontWeight !== undefined && !(typeof props.fontWeight === 'string' || (Number.isFinite(props.fontWeight) && props.fontWeight >= 100 && props.fontWeight <= 900))) {
+            throw new Error('The assistant returned an invalid font weight.');
+          }
+          if (props.textAlign !== undefined && !['left', 'center', 'right', 'justify'].includes(props.textAlign)) {
+            throw new Error('The assistant returned an invalid text alignment.');
+          }
+          if (props.fontFamily) {
+            if (!isAvailableFont(props.fontFamily)) throw new Error('The assistant selected an unsupported font.');
+            if (!/text/i.test(target.type || '')) throw new Error('Typography changes can only be applied to text items.');
+            fontNames.push(props.fontFamily);
+          }
+          if ((props.fontSize !== undefined || props.fontWeight !== undefined || props.fontFamily !== undefined ||
+            props.fontStyle !== undefined || props.underline !== undefined || props.linethrough !== undefined ||
+            props.textAlign !== undefined) && !/text/i.test(target.type || '')) {
+            throw new Error('Typography changes can only be applied to text items.');
+          }
+        }
+      } else if (operation.type === 'add_text') {
+        if (!operation.text.trim() || operation.text.length > 300) throw new Error('The assistant returned invalid text.');
+        if (operation.fill && !isHexColor(operation.fill)) throw new Error('The assistant returned an invalid color.');
+        if (operation.fontSize !== undefined && (!Number.isFinite(operation.fontSize) || operation.fontSize < 8 || operation.fontSize > 120)) throw new Error('The assistant returned an invalid font size.');
+        if (operation.fontFamily) {
+          if (!isAvailableFont(operation.fontFamily)) throw new Error('The assistant selected an unsupported font.');
+          fontNames.push(operation.fontFamily);
+        }
+      } else if (operation.type === 'set_background' && !isHexColor(operation.color)) {
+        throw new Error('The assistant returned an invalid background color.');
+      } else if (operation.type === 'resize_page' &&
+        ((operation.width !== undefined && (!Number.isFinite(operation.width) || operation.width < 200 || operation.width > 4000)) ||
+          (operation.height !== undefined && (!Number.isFinite(operation.height) || operation.height < 200 || operation.height > MAX_PAGE_HEIGHT)) ||
+          (operation.width === undefined && operation.height === undefined))) {
+        throw new Error('The assistant returned invalid page dimensions.');
+      } else if (operation.type === 'set_theme' && !(operation.theme in THEMES)) {
+        throw new Error('The assistant selected an unsupported design theme.');
+      }
+    }
+
+    await ensureFonts(fontNames);
+    for (const operation of expandedOperations) {
+      if (operation.type === 'add_text') {
+        const object = await createObject(F, {
+          type: 'text',
+          text: operation.text,
+          fontSize: clamp(operation.fontSize || 32, 8, 120),
+          fill: operation.fill || '#0F172A',
+          fontFamily: operation.fontFamily || 'Inter',
+          width: Math.min(600, docRef.current.width - 40),
+          name: 'AI text',
+        });
+        if (operation.left === undefined || operation.top === undefined) placeCenter(object);
+        object.set({
+          left: clamp(operation.left ?? object.left ?? 0, 0, docRef.current.width - 20),
+          top: clamp(operation.top ?? object.top ?? 0, 0, docRef.current.height - 20),
+        });
+        additions.push(object);
+      }
+    }
+
+    hist.current.lock = true;
+    try {
+      for (const operation of expandedOperations) {
+        if (operation.type === 'update_object') {
+          const target = objects[operation.index] as InfographicObject;
+          const {
+            text,
+            fill,
+            fontSize,
+            fontFamily,
+            fontWeight,
+            textAlign,
+            opacity,
+            angle,
+            left,
+            top,
+          } = operation.properties;
+          const properties: Record<string, unknown> = {};
+          if (text !== undefined) properties.text = text;
+          if (fill !== undefined) properties.fill = fill;
+          if (fontSize !== undefined) properties.fontSize = fontSize;
+          if (fontFamily !== undefined) properties.fontFamily = fontFamily;
+          if (fontWeight !== undefined) properties.fontWeight = fontWeight;
+          if (operation.properties.fontStyle !== undefined) properties.fontStyle = operation.properties.fontStyle;
+          if (operation.properties.underline !== undefined) properties.underline = operation.properties.underline;
+          if (operation.properties.linethrough !== undefined) properties.linethrough = operation.properties.linethrough;
+          if (textAlign !== undefined) properties.textAlign = textAlign;
+          if (opacity !== undefined) properties.opacity = opacity;
+          if (angle !== undefined) properties.angle = angle;
+          if (left !== undefined) properties.left = clamp(left, 0, docRef.current.width - 20);
+          if (top !== undefined) properties.top = clamp(top, 0, docRef.current.height - 20);
+          target.set(properties);
+          if (/text/i.test(target.type || '') && 'initDimensions' in target && typeof target.initDimensions === 'function') target.initDimensions();
+          target.dirty = true;
+          target.setCoords();
+        } else if (operation.type === 'delete_object') {
+          c.remove(objects[operation.index]);
+        } else if (operation.type === 'set_background') {
+          setDoc({ bg: { type: 'solid', c1: operation.color } });
+          layout();
+        } else if (operation.type === 'resize_page') {
+          const width = operation.width ?? docRef.current.width;
+          const height = operation.height ?? docRef.current.height;
+          setDoc({ width, height });
+          layout();
+        } else if (operation.type === 'set_theme') {
+          const theme = THEMES[operation.theme];
+          const palette = theme.palette;
+          let accentIndex = 0;
+          const recolor = (object: FabricObject) => {
+            const fill = object.fill;
+            if (typeof fill === 'string' && /^#[\da-f]{6}$/i.test(fill)) {
+              const rgb = fill.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)) || [0, 0, 0];
+              const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+              const isTextObject = /text/i.test(object.type || '');
+              if (isTextObject) {
+                object.set('fill', luminance > 0.9 ? theme.darkBandText : luminance < 0.15 ? theme.textColor : luminance < 0.65 ? theme.mutedText : theme.primary);
+              } else if (luminance > 0.94) {
+                object.set('fill', theme.cardBg);
+              } else if (luminance < 0.12) {
+                object.set('fill', theme.darkBandBg);
+              } else if (luminance < 0.35) {
+                object.set('fill', theme.cardBorder);
+              } else {
+                object.set('fill', palette[accentIndex++ % palette.length]);
+              }
+            }
+            const stroke = object.stroke;
+            if (typeof stroke === 'string' && /^#[\da-f]{6}$/i.test(stroke)) {
+              object.set('stroke', theme.primary);
+            }
+            if ('getObjects' in object && typeof object.getObjects === 'function') {
+              object.getObjects().forEach(recolor);
+            }
+            object.dirty = true;
+            object.setCoords();
+          };
+          objects.forEach(recolor);
+          setDoc({ bg: { type: 'solid', c1: theme.bg } });
+          layout();
+        } else if (operation.type === 'scale_object') {
+          const target = objects[operation.index];
+          const scaledWidth = target.getScaledWidth() * operation.factor;
+          const scaledHeight = target.getScaledHeight() * operation.factor;
+          target.set({
+            scaleX: (target.scaleX || 1) * operation.factor,
+            scaleY: (target.scaleY || 1) * operation.factor,
+            left: clamp(target.left || 0, 0, docRef.current.width - scaledWidth),
+            top: clamp(target.top || 0, 0, docRef.current.height - scaledHeight),
+          });
+          target.dirty = true;
+          target.setCoords();
+        }
+      }
+      for (const operation of operations) {
+        if (operation.type !== 'arrange_objects') continue;
+        const arranged = operation.indexes.map((index) => objects[index]).sort((a, b) => {
+          const primary = operation.layout === 'horizontal' ? a.left - b.left : a.top - b.top;
+          return primary || objects.indexOf(a) - objects.indexOf(b);
+        });
+        const bounds = arranged.reduce(
+          (box, object) => ({
+            left: Math.min(box.left, object.left || 0),
+            top: Math.min(box.top, object.top || 0),
+            right: Math.max(box.right, (object.left || 0) + object.getScaledWidth()),
+            bottom: Math.max(box.bottom, (object.top || 0) + object.getScaledHeight()),
+          }),
+          { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity }
+        );
+        const gap = operation.gap ?? 16;
+        if (operation.layout === 'horizontal') {
+          const totalWidth = arranged.reduce((total, object) => total + object.getScaledWidth(), 0) + gap * (arranged.length - 1);
+          let left = clamp((bounds.left + bounds.right - totalWidth) / 2, 0, Math.max(0, docRef.current.width - totalWidth));
+          const centerY = (bounds.top + bounds.bottom) / 2;
+          arranged.forEach((object) => {
+            object.set({
+              left,
+              top: clamp(centerY - object.getScaledHeight() / 2, 0, Math.max(0, docRef.current.height - object.getScaledHeight())),
+            });
+            left += object.getScaledWidth() + gap;
+            object.setCoords();
+          });
+        } else if (operation.layout === 'vertical') {
+          const totalHeight = arranged.reduce((total, object) => total + object.getScaledHeight(), 0) + gap * (arranged.length - 1);
+          let top = clamp((bounds.top + bounds.bottom - totalHeight) / 2, 0, Math.max(0, docRef.current.height - totalHeight));
+          const centerX = (bounds.left + bounds.right) / 2;
+          arranged.forEach((object) => {
+            object.set({
+              left: clamp(centerX - object.getScaledWidth() / 2, 0, Math.max(0, docRef.current.width - object.getScaledWidth())),
+              top,
+            });
+            top += object.getScaledHeight() + gap;
+            object.setCoords();
+          });
+        } else {
+          const columns = Math.ceil(Math.sqrt(arranged.length));
+          const rows = Math.ceil(arranged.length / columns);
+          const cellWidth = Math.max(...arranged.map((object) => object.getScaledWidth()));
+          const cellHeight = Math.max(...arranged.map((object) => object.getScaledHeight()));
+          const gridWidth = columns * cellWidth + (columns - 1) * gap;
+          const gridHeight = rows * cellHeight + (rows - 1) * gap;
+          const startX = clamp((bounds.left + bounds.right - gridWidth) / 2, 0, Math.max(0, docRef.current.width - gridWidth));
+          const startY = clamp((bounds.top + bounds.bottom - gridHeight) / 2, 0, Math.max(0, docRef.current.height - gridHeight));
+          arranged.forEach((object, index) => {
+            const column = index % columns;
+            const row = Math.floor(index / columns);
+            object.set({
+              left: startX + column * (cellWidth + gap) + (cellWidth - object.getScaledWidth()) / 2,
+              top: startY + row * (cellHeight + gap) + (cellHeight - object.getScaledHeight()) / 2,
+            });
+            object.setCoords();
+          });
+        }
+      }
+      additions.forEach((object) => c.add(object));
+      c.requestRenderAll();
+    } finally {
+      hist.current.lock = false;
+    }
+    sync();
+    commit(true);
+    chatBaselineRef.current = null;
+    say('Design updated. You can undo this change at any time.');
+  };
+
   /* ---------- keyboard shortcuts ---------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -946,9 +1409,52 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
     return <div className="ie-boot">Checking your account…</div>;
   }
 
+  // Function to handle listing the custom infographic on the website
+  const handleListOnWebsite = async () => {
+    const canvas = canvasRef.current;
+    const doc = docRef.current;
+    if (!canvas) return;
+
+    try {
+      setIsPublishing(true);
+      say('Preparing your infographic for submission...');
+
+      const dataUrl = X.toDataURL(canvas, doc, zoomRef.current, {
+        format: 'png',
+        scale: 2,
+      });
+
+      const apiOrigin = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiOrigin) {
+        throw new Error('NEXT_PUBLIC_API_URL is not configured.');
+      }
+
+      const blob = await (await fetch(dataUrl)).blob();
+      const formData = new FormData();
+      formData.append('image', blob, 'custom-infographic.png');
+
+      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics/temp-upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await uploadRes.json();
+
+      if (!uploadRes.ok || !data.imageUrl) {
+        throw new Error(data.error || 'Failed to process image');
+      }
+
+      const imageUrl = new URL(data.imageUrl, apiOrigin).toString();
+      router.push(`/submit-infographics?temp_image=${encodeURIComponent(imageUrl)}`);
+    } catch (error) {
+      console.error('Could not prepare infographic for submission:', error);
+      say(error instanceof Error ? error.message : 'Could not prepare infographic. Please try again.');
+      setIsPublishing(false);
+    }
+  };
   return (
     <div className="ie-app">
-      <TopBar api={api} doc={doc} zoom={zoom} status={status} flags={flags} />
+      <TopBar api={api} doc={doc} zoom={zoom} status={status} flags={flags} handleListClick={handleListOnWebsite} isPublishing={isPublishing} />
       <div className="ie-body">
         <LeftPanel api={api} doc={doc} userId={userId} />
         <main className="ie-work" ref={scrollRef}>
@@ -959,6 +1465,11 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         </main>
         <RightPanel api={api} doc={doc} selection={selection} tick={tick} />
       </div>
+      {ready && chatOpen ? (
+        <DesignChat onSend={sendDesignChatMessage} onApply={applyAIEditOperations} onClose={() => setChatOpen(false)} />
+      ) : ready ? (
+        <DesignChatButton onClick={() => setChatOpen(true)} />
+      ) : null}
       {toast && <div className="ie-toast">{toast}</div>}
     </div>
   );

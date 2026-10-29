@@ -168,7 +168,7 @@ export default function InfographicsGrid() {
                              */
                             if (item.type === 'ad') {
                                 return (
-                                    <div key={item.key} className="mb-5 w-[187px]">
+                                    <div key={item.key} className="ad-slot mb-5 w-[187px]">
                                         <div className="w-[187px] overflow-hidden">
                                             <GoogleAds
                                                 adSlot="8991134354"

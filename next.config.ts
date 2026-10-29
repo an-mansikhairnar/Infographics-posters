@@ -5,9 +5,14 @@ const nextConfig = {
 
     return [
       { source: '/api/auth/:path*', destination: `${backendOrigin}/api/auth/:path*` },
+      { source: '/api/password-reset', destination: `${backendOrigin}/api/password-reset` },
       {
         source: '/api/creator-designs/:path*',
         destination: `${backendOrigin}/api/creator-designs/:path*`,
+      },
+      {
+        source: '/uploads/infographics/:filename',
+        destination: `${backendOrigin}/api/client-infographics/uploads/:filename`,
       },
       {
         source: '/images/:path*',

@@ -73,6 +73,7 @@ export default function LeftPanel({ api, doc, userId }: PanelProps & { userId: s
         ))}
       </nav>
       <div className="ie-drawer">
+        {/* {tab === 'ai' && <AiTab api={api} />} */}
         {tab === 'templates' && <TemplatesTab api={api} />}
         {tab === 'text' && <TextTab api={api} />}
         {tab === 'elements' && <ElementsTab api={api} />}
@@ -219,139 +220,140 @@ function ImagesTab({ api, userId }: ApiProps & { userId: string }) {
     </div>
   );
 }
-function AiTab({ api }: ApiProps) {
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const SUGGESTIONS = [
-    '5 Morning Habits for High Productivity and Focus',
-    'Remote Work vs Office Work: Pros, Cons and Stats',
-    'Cybersecurity Best Practices for Modern Teams',
-    'History & Evolution of Artificial Intelligence',
-  ];
+// function AiTab({ api }: ApiProps) {
+//   const [prompt, setPrompt] = useState('');
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState<string | null>(null);
 
-  async function handleGenerate() {
-    if (!prompt.trim() || loading) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: prompt.trim() }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to generate');
-      }
-      const json = await res.json();
-      if (!json.data) throw new Error('No data received from AI');
-      const compiled = compileBackendToTemplate(json.data, 'ai-generated-' + Date.now(), json.data.theme);
-      await api.applyTemplate(compiled);
-      api.say('Infographic generated successfully!');
-    } catch (err: unknown) {
-      setError((err as Error).message || 'Generation failed.');
-    } finally {
-      setLoading(false);
-    }
-  }
+//   const SUGGESTIONS = [
+//     '5 Morning Habits for High Productivity and Focus',
+//     'Remote Work vs Office Work: Pros, Cons and Stats',
+//     'Cybersecurity Best Practices for Modern Teams',
+//     'History & Evolution of Artificial Intelligence',
+//   ];
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 className="ie-title" style={{ margin: 0 }}>AI Designer</h3>
-        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#EFF6FF', color: '#2563EB', textTransform: 'uppercase' }}>
-          Auto Theming
-        </span>
-      </div>
-      <p className="ie-hint" style={{ margin: 0 }}>
-        Type any topic. AI automatically selects the color mood, layout architecture, and diagrams tailored to your content.
-      </p>
+//   async function handleGenerate() {
+//     if (!prompt.trim() || loading) return;
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate`, {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ text: prompt.trim() }),
+//       });
+//       if (!res.ok) {
+//         const err = await res.json().catch(() => ({}));
+//         throw new Error(err.error || 'Failed to generate');
+//       }
+//       const json = await res.json();
+//       if (!json.data) throw new Error('No data received from AI');
+//       const compiled = compileBackendToTemplate(json.data, 'ai-generated-' + Date.now(), json.data.theme);
+//       await api.applyTemplate(compiled);
+//       api.say('Infographic generated successfully!');
+//     } catch (err: unknown) {
+//       setError((err as Error).message || 'Generation failed.');
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
 
-      {/* Textarea */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <textarea
-          rows={3}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="e.g. 5 Morning Habits for High Productivity..."
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            fontSize: 13,
-            lineHeight: 1.4,
-            borderRadius: 8,
-            border: '1px solid #CBD5E1',
-            background: '#FFFFFF',
-            color: '#0F172A',
-            resize: 'vertical',
-            outline: 'none',
-            fontFamily: 'Inter, sans-serif',
-            boxSizing: 'border-box',
-          }}
-        />
-      </div>
+//   return (
+//     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+//       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+//         <h3 className="ie-title" style={{ margin: 0 }}>AI Designer</h3>
+//         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#EFF6FF', color: '#2563EB', textTransform: 'uppercase' }}>
+//           Auto Theming
+//         </span>
+//       </div>
+//       <p className="ie-hint" style={{ margin: 0 }}>
+//         Type any topic. AI automatically selects the color mood, layout architecture, and diagrams tailored to your content.
+//       </p>
 
-      {/* Suggestions */}
-      <div>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', display: 'block', marginBottom: 6 }}>
-          Try a prompt:
-        </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setPrompt(s)}
-              style={{
-                textAlign: 'left',
-                fontSize: 12,
-                padding: '6px 10px',
-                borderRadius: 6,
-                background: '#F1F5F9',
-                border: '1px solid #E2E8F0',
-                color: '#334155',
-                cursor: 'pointer',
-              }}
-            >
-              💡 {s}
-            </button>
-          ))}
-        </div>
-      </div>
+//       {/* Textarea */}
+//       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+//         <textarea
+//           rows={3}
+//           value={prompt}
+//           onChange={(e) => setPrompt(e.target.value)}
+//           placeholder="e.g. 5 Morning Habits for High Productivity..."
+//           style={{
+//             width: '100%',
+//             padding: '10px 12px',
+//             fontSize: 13,
+//             lineHeight: 1.4,
+//             borderRadius: 8,
+//             border: '1px solid #CBD5E1',
+//             background: '#FFFFFF',
+//             color: '#0F172A',
+//             resize: 'vertical',
+//             outline: 'none',
+//             fontFamily: 'Inter, sans-serif',
+//             boxSizing: 'border-box',
+//           }}
+//         />
+//       </div>
 
-      {error && (
-        <div style={{ fontSize: 12, color: '#DC2626', background: '#FEE2E2', padding: '8px 10px', borderRadius: 6 }}>
-          {error}
-        </div>
-      )}
+//       {/* Suggestions */}
+//       <div>
+//         <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', display: 'block', marginBottom: 6 }}>
+//           Try a prompt:
+//         </label>
+//         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+//           {SUGGESTIONS.map((s) => (
+//             <button
+//               key={s}
+//               type="button"
+//               onClick={() => setPrompt(s)}
+//               style={{
+//                 textAlign: 'left',
+//                 fontSize: 12,
+//                 padding: '6px 10px',
+//                 borderRadius: 6,
+//                 background: '#F1F5F9',
+//                 border: '1px solid #E2E8F0',
+//                 color: '#334155',
+//                 cursor: 'pointer',
+//               }}
+//             >
+//               💡 {s}
+//             </button>
+//           ))}
+//         </div>
+//       </div>
 
-      {/* Generate button */}
-      <button
-        type="button"
-        disabled={loading || !prompt.trim()}
-        onClick={handleGenerate}
-        style={{
-          width: '100%',
-          padding: '10px 14px',
-          borderRadius: 8,
-          background: loading || !prompt.trim() ? '#94A3B8' : 'linear-gradient(135deg, #2563EB, #4F46E5)',
-          color: '#FFFFFF',
-          fontSize: 13,
-          fontWeight: 600,
-          border: 'none',
-          cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-        }}
-      >
-        {loading ? 'Synthesizing Infographic...' : '✨ Generate on Canvas'}
-      </button>
-    </div>
-  );
-}
+//       {error && (
+//         <div style={{ fontSize: 12, color: '#DC2626', background: '#FEE2E2', padding: '8px 10px', borderRadius: 6 }}>
+//           {error}
+//         </div>
+//       )}
+
+//       {/* Generate button */}
+//       <button
+//         type="button"
+//         disabled={loading || !prompt.trim()}
+//         onClick={handleGenerate}
+//         style={{
+//           width: '100%',
+//           padding: '10px 14px',
+//           borderRadius: 8,
+//           background: loading || !prompt.trim() ? '#94A3B8' : 'linear-gradient(135deg, #2563EB, #4F46E5)',
+//           color: '#FFFFFF',
+//           fontSize: 13,
+//           fontWeight: 600,
+//           border: 'none',
+//           cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
+//           display: 'flex',
+//           alignItems: 'center',
+//           justifyContent: 'center',
+//           gap: 6,
+//           boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+//         }}
+//       >
+//         {loading ? 'Synthesizing Infographic...' : '✨ Generate on Canvas'}
+//       </button>
+//     </div>
+//   );
+// }
 
