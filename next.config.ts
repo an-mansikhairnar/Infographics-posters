@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/uploads/infographics/:filename',
+          destination: '/api/client-infographics/uploads/:filename',
+        },
+      ],
+    };
+  },
 };
 
 export default nextConfig;

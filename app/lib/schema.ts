@@ -50,67 +50,69 @@
 //   });
 //   return { ...d, sections };
 // }
+ import { z } from "zod";
 
-import { z } from "zod";
+    export const ICONS = ["chart","users","clock","star","shield","zap","globe","heart","check","dollar"] as const;
+    const Icon = z.enum(ICONS).catch("star");
 
-export const ICONS = ["chart","users","clock","star","shield","zap","globe","heart","check","dollar"] as const;
-const Icon = z.enum(ICONS).catch("star"); // unknown icon from the LLM -> "star" instead of failing
-const h = {
-  heading: z.string().optional(),
-  styleVariant: z.enum(["default", "dark_band", "accent_card", "minimal"]).optional(),
-};
+    const h = {
+      heading: z.string().nullable().optional(),
+      styleVariant: z.string().nullable().optional(),
+    };
 
-export const GRAPHICS = [
-  "video", "player", "newspaper", "clock", "globe", "laptop", "cart",
-  "camera", "palette", "person", "pictogram", "chart", "shield", "growth"
-] as const;
-const Graphic = z.string().catch("video");
+    export const GRAPHICS = [
+      "video", "player", "newspaper", "clock", "globe", "laptop", "cart",
+      "camera", "palette", "person", "pictogram", "chart", "shield", "growth"
+    ] as const;
+    const Graphic = z.string().catch("video");
 
-export const SectionSchema = z.discriminatedUnion("type", [
-  z.object({ ...h, type: z.literal("split_hero"),
-    leftHeading: z.string().default("WHAT'S WORKING"),
-    rightHeading: z.string().default("WHAT'S NOT"),
-    leftItems: z.array(z.object({ value: z.string(), label: z.string(), graphic: Graphic.optional(), fraction: z.array(z.number()).optional() })).min(1),
-    rightItems: z.array(z.object({ value: z.string(), label: z.string(), graphic: Graphic.optional(), fraction: z.array(z.number()).optional() })).min(1),
-  }),
-  z.object({ ...h, type: z.literal("dark_grid"),
-    items: z.array(z.object({ value: z.string(), label: z.string(), note: z.string().optional(), graphic: Graphic.optional() })).min(2),
-  }),
-  z.object({ ...h, type: z.literal("zigzag_story"),
-    items: z.array(z.object({ value: z.string(), label: z.string(), desc: z.string().optional(), graphic: Graphic.optional() })).min(2),
-  }),
-  z.object({ ...h, type: z.literal("stats"),
-    items: z.array(z.object({ value: z.string(), label: z.string(), note: z.string().optional(), icon: Icon, graphic: Graphic.optional(), fraction: z.array(z.number()).optional() })).min(2) }),
-  z.object({ ...h, type: z.literal("steps"),
-    items: z.array(z.object({ title: z.string(), desc: z.string(), graphic: Graphic.optional() })).min(3) }),
-  z.object({ ...h, type: z.literal("timeline"),
-    items: z.array(z.object({ date: z.string(), title: z.string(), graphic: Graphic.optional() })).min(3) }),
-  z.object({ ...h, type: z.literal("comparison"),
-    left: z.object({ title: z.string(), points: z.array(z.string()).min(1) }),
-    right: z.object({ title: z.string(), points: z.array(z.string()).min(1) }) }),
-  z.object({ ...h, type: z.literal("bar_chart"),
-    unit: z.string().optional(),
-    data: z.array(z.object({ label: z.string(), value: z.number() })).min(2) }),
-  z.object({ ...h, type: z.literal("list"),
-    items: z.array(z.object({ title: z.string(), desc: z.string(), icon: Icon, graphic: Graphic.optional() })).min(3) }),
-  z.object({ ...h, type: z.literal("quote"), text: z.string(), author: z.string().optional() }),
-]);
+    export const SectionSchema = z.discriminatedUnion("type", [
+      z.object({ ...h, type: z.enum(["split_hero"]),
+        leftHeading: z.string().default("WHAT'S WORKING"),
+        rightHeading: z.string().default("WHAT'S NOT"),
+        leftItems: z.array(z.object({ value: z.string(), label: z.string(), graphic: Graphic.nullable().optional() })).min(1),
+        rightItems: z.array(z.object({ value: z.string(), label: z.string(), graphic: Graphic.nullable().optional() })).min(1),
+      }),
+      z.object({ ...h, type: z.enum(["dark_grid"]),
+        items: z.array(z.object({ value: z.string(), label: z.string(), note: z.string().nullable().optional(), graphic: Graphic.nullable().
+  optional() })).min(2),
+      }),
+      z.object({ ...h, type: z.enum(["zigzag_story"]),
+        items: z.array(z.object({ value: z.string(), label: z.string(), desc: z.string().nullable().optional(), graphic: Graphic.nullable().
+  optional() })).min(2),
+      }),
+      z.object({ ...h, type: z.enum(["stats"]),
+        items: z.array(z.object({ value: z.string(), label: z.string(), note: z.string().nullable().optional(), icon: Icon, graphic:
+  Graphic.nullable().optional() })).min(2) }),
+      z.object({ ...h, type: z.enum(["steps"]),
+        items: z.array(z.object({ title: z.string(), desc: z.string(), graphic: Graphic.nullable().optional() })).min(3) }),
+      z.object({ ...h, type: z.enum(["timeline"]),
+        items: z.array(z.object({ date: z.string(), title: z.string(), graphic: Graphic.nullable().optional() })).min(3) }),
+      z.object({ ...h, type: z.enum(["comparison"]),
+        left: z.object({ title: z.string(), points: z.array(z.string()).min(1) }),
+        right: z.object({ title: z.string(), points: z.array(z.string()).min(1) }) }),
+      z.object({ ...h, type: z.enum(["bar_chart"]),
+        unit: z.string().nullable().optional(),
+        data: z.array(z.object({ label: z.string(), value: z.number() })).min(2) }),
+      z.object({ ...h, type: z.enum(["list"]),
+        items: z.array(z.object({ title: z.string(), desc: z.string(), icon: Icon, graphic: Graphic.nullable().optional() })).min(3) }),
+      z.object({ ...h, type: z.enum(["quote"]), text: z.string(), author: z.string().nullable().optional() }),
+    ]);
 
-export const THEMES_LIST = ["editorialGold", "modernBlue", "emeraldGrowth", "sunsetCoral", "midnightDark"] as const;
-export const ThemeEnum = z.enum(THEMES_LIST).catch("editorialGold");
+    export const THEMES_LIST = ["editorialGold", "modernBlue", "emeraldGrowth", "sunsetCoral", "midnightDark"] as const;
+    export const ThemeEnum = z.enum(THEMES_LIST).catch("editorialGold");
 
-export const InfographicSchema = z.object({
-  title: z.string(),
-  subtitle: z.string().optional(),
-  intro: z.string().optional(),
-  takeaway: z.string().optional(),
-  /** Zone 4: Authority — source citation or credible quote appearing before the footer */
-  source: z.string().optional(),
-  /** Zone 5: Footer sign-off metadata text (e.g. "Editorial Report | 2026 Edition") */
-  footerText: z.string().optional(),
-  theme: ThemeEnum.default("editorialGold"),
-  sections: z.array(SectionSchema).min(3),
-});
+    export const InfographicSchema = z.object({
+      title: z.string(),
+      subtitle: z.string().nullable().optional(),
+      intro: z.string().nullable().optional(),
+      takeaway: z.string().nullable().optional(),
+      source: z.string().nullable().optional(),
+      footerText: z.string().nullable().optional(),
+      theme: ThemeEnum.default("editorialGold"),
+      sections: z.array(SectionSchema).min(3),
+    });
+
 
 export type Section = z.infer<typeof SectionSchema>;
 export type SectionType = Section["type"];
@@ -135,3 +137,4 @@ export function clamp(d: Infographic): Infographic {
   });
   return { ...d, sections };
 }
+

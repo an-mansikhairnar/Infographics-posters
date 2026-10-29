@@ -45,7 +45,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 64;
 
-function isValidNewPassword(password: string): boolean {
+export function isValidNewPassword(password: string): boolean {
   return (
     password.length >= PASSWORD_MIN &&
     password.length <= PASSWORD_MAX &&

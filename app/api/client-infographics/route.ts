@@ -161,7 +161,6 @@ export async function POST(request: Request) {
         `,
       });
 
-      console.log('Submission email sent successfully');
     } catch (mailError) {
       console.error('Email sending error:', mailError);
     }
