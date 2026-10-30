@@ -20,6 +20,7 @@ import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
 import DesignChat, { DesignChatButton, type ChatMessage } from './DesignChat';
 import type { EditorApi, EditorDocument, EditorStatus, InfographicObject } from './interfaces';
+import PaymentStep from '../../submit-infographics/payment/PaymentStep';
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const initialDocument: EditorDocument = { name: 'Untitled infographic', width: 800, height: 2000, bg: { type: 'solid', c1: '#FFFFFF' } };
@@ -63,6 +64,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
   const [flags, setFlags] = useState<EditorFlags>({ undo: false, redo: false });
   const [toast, setToast] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [paymentImageUrl, setPaymentImageUrl] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
 
   const say = useCallback((msg: string) => {
@@ -1445,7 +1447,8 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       }
 
       const imageUrl = new URL(data.imageUrl, apiOrigin).toString();
-      router.push(`/submit-infographics?temp_image=${encodeURIComponent(imageUrl)}`);
+      setPaymentImageUrl(imageUrl);
+      setIsPublishing(false);
     } catch (error) {
       console.error('Could not prepare infographic for submission:', error);
       say(error instanceof Error ? error.message : 'Could not prepare infographic. Please try again.');
@@ -1470,6 +1473,9 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       ) : ready ? (
         <DesignChatButton onClick={() => setChatOpen(true)} />
       ) : null}
+      {paymentImageUrl && (
+        <PaymentStep initialImageUrl={paymentImageUrl} onClose={() => setPaymentImageUrl(null)} />
+      )}
       {toast && <div className="ie-toast">{toast}</div>}
     </div>
   );
