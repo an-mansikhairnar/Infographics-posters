@@ -171,3 +171,11 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
 .ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
   display: none !important;
 }
+
+.inter-text {
+  font-family: var(--font-inter), sans-serif;
+}
+
+.playfair-text {
+  font-family: var(--font-playfair), serif;
+}

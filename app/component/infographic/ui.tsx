@@ -69,7 +69,7 @@ export function Icon({ name, size = 18 }: Readonly<IconProps>) {
   );
 }
 
-export function IconBtn({ icon, title, active, onClick, disabled, size = 18, label }: Readonly<IconBtnProps>) {
+export function IconBtn({ icon, title, active, onClick, disabled, size = 20, label }: Readonly<IconBtnProps>) {
   return (
     <button type="button" className={'ie-ibtn' + (active ? ' on' : '')} title={title} aria-label={title} onClick={onClick} disabled={disabled}>
       <Icon name={icon} size={size} />{label && <span>{label}</span>}

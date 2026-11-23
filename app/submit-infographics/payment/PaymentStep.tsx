@@ -10,16 +10,13 @@ const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 const isPaypalConfigured = Boolean(paypalClientId);
 
 const initialOptions = {
-  clientId: paypalClientId!,
-  currency: 'USD',
-  intent: 'capture',
+  'clientId': paypalClientId!,
+  'currency': 'USD',
+  'intent': 'capture',
   'disable-funding': 'card',
 };
 
-export default function PaymentStep({
-  initialImageUrl,
-  onClose,
-}: Readonly<{ initialImageUrl?: string; onClose?: () => void }>) {
+export default function PaymentStep({ initialImageUrl, onClose }: Readonly<{ initialImageUrl?: string; onClose?: () => void }>) {
   const router = useRouter();
 
   useEffect(() => {
@@ -60,8 +57,18 @@ export default function PaymentStep({
             type="button"
             onClick={onClose}
             aria-label="Close payment dialog"
-            className="absolute right-4 top-4 rounded-md p-2 text-xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-900">
-            ×
+            className="absolute right-4 top-4 rounded-md border border-transparent p-2 text-xl font-medium leading-none !text-black transition-all duration-200 hover:border-black hover:bg-slate-100 hover:!text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:!text-white dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:!text-white dark:focus:ring-slate-500">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              className="h-5 w-5"
+              aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         )}
         <h1 id="infographic-payment-title" className="pr-10 text-2xl font-bold text-slate-900">

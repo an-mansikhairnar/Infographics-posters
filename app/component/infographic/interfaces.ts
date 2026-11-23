@@ -34,7 +34,7 @@ export type EditorDocument = {
   bg: Background;
 };
 
-export type EditorStatus = 'saved' | 'saving' | 'dirty' | 'error';
+export type EditorStatus = 'saved' | 'saving' | 'dirty' | 'error'|'new';
 
 export type EditorApi = {
   readonly canvas: Canvas | null;

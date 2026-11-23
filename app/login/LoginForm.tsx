@@ -41,8 +41,20 @@ const PASSWORD_RULES = [
   { id: 'special', label: 'One special character (e.g. ! @ # $)', test: (v: string) => /[^A-Za-z0-9\s]/.test(v) },
 ] as const;
 
+// function safeCallback(value: string | null): string {
+//   return value?.startsWith('/') && !value.startsWith('//') ? value : '/infographic-maker';
+// }
 function safeCallback(value: string | null): string {
-  return value?.startsWith('/') && !value.startsWith('//') ? value : '/infographic-maker';
+  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return '/infographic-maker';
+  }
+
+  // Avoid redirect loops
+  if (value.startsWith('/login')) {
+    return '/infographic-maker';
+  }
+
+  return value;
 }
 
 function authErrorMessage(code: string | null): string | null {
@@ -187,27 +199,50 @@ export default function LoginForm() {
     setError(null);
     setNotice(null);
     try {
+      // const result = await signIn('credentials', {
+      //   firstName: mode === 'register' ? firstName.trim() : '',
+      //   lastName: mode === 'register' ? lastName.trim() : '',
+      //   email: email.trim(),
+      //   password,
+      //   mode,
+      //   redirect: false,
+      //   redirectTo: callbackUrl,
+      // });
+      // if (result?.error) {
+      //   setError(
+      //     result.code === 'credentials'
+      //       ? mode === 'register'
+      //         ? 'An account with this email already exists, or the password is invalid.'
+      //         : 'Invalid email or password.'
+      //       : 'Authentication could not be completed. Please try again.'
+      //   );
+      //   return;
+      // }
+      // router.replace(callbackUrl);
+      // router.refresh();
       const result = await signIn('credentials', {
-        firstName: mode === 'register' ? firstName.trim() : '',
-        lastName: mode === 'register' ? lastName.trim() : '',
-        email: email.trim(),
-        password,
-        mode,
-        redirect: false,
-        redirectTo: callbackUrl,
-      });
-      if (result?.error) {
-        setError(
-          result.code === 'credentials'
-            ? mode === 'register'
-              ? 'An account with this email already exists, or the password is invalid.'
-              : 'Invalid email or password.'
-            : 'Authentication could not be completed. Please try again.'
-        );
-        return;
-      }
-      router.replace(callbackUrl);
-      router.refresh();
+  firstName: mode === 'register' ? firstName.trim() : '',
+  lastName: mode === 'register' ? lastName.trim() : '',
+  email: email.trim(),
+  password,
+  mode,
+  redirect: false,
+});
+
+if (result?.error) {
+  setError(
+    result.code === 'credentials'
+      ? mode === 'register'
+        ? 'An account with this email already exists, or the password is invalid.'
+        : 'Invalid email or password.'
+      : 'Authentication could not be completed. Please try again.'
+  );
+  return;
+}
+
+// Redirect to the original page
+router.replace(callbackUrl);
+router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to sign in.');
     } finally {
@@ -285,16 +320,33 @@ export default function LoginForm() {
     }
   }
 
+  // async function authenticateProvider(provider: Provider) {
+  //   setBusy(true);
+  //   setError(null);
+  //   try {
+  //     await signIn(provider, { redirectTo: callbackUrl });
+  //   } catch (cause) {
+  //     setError(cause instanceof Error ? cause.message : 'Unable to start social sign in.');
+  //     setBusy(false);
+  //   }
+  // }
   async function authenticateProvider(provider: Provider) {
-    setBusy(true);
-    setError(null);
-    try {
-      await signIn(provider, { redirectTo: callbackUrl });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to start social sign in.');
-      setBusy(false);
-    }
+  setBusy(true);
+  setError(null);
+
+  try {
+    await signIn(provider, {
+      redirectTo: callbackUrl,
+    });
+  } catch (cause) {
+    setError(
+      cause instanceof Error
+        ? cause.message
+        : 'Unable to start social sign in.'
+    );
+    setBusy(false);
   }
+}
 
   function switchMode() {
     setMode(mode === 'login' ? 'register' : 'login');

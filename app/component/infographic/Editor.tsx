@@ -13,14 +13,16 @@ import { buildChart } from '@/lib/infographic/charts';
 import { collectFonts, ensureFonts, injectFonts } from '@/lib/infographic/fonts';
 import { getTemplate } from '@/lib/infographic/templates';
 import { getDesign, saveDesign } from '@/lib/infographic/storage';
+import { clearDraft, readDraft, writeDraft, type DraftRecord } from '@/lib/infographic/draft';
 import * as X from '@/lib/infographic/export';
-import type { FabricApi } from '@/lib/infographic/types';
+import type { DesignInput, DesignRecord, FabricApi } from '@/lib/infographic/types';
 import TopBar from './TopBar';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
 import DesignChat, { DesignChatButton, type ChatMessage } from './DesignChat';
 import type { EditorApi, EditorDocument, EditorStatus, InfographicObject } from './interfaces';
 import PaymentStep from '../../submit-infographics/payment/PaymentStep';
+import { CanvasToolbar, ZoomControls } from './CanvasControls';
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const initialDocument: EditorDocument = { name: 'Untitled infographic', width: 800, height: 2000, bg: { type: 'solid', c1: '#FFFFFF' } };
@@ -38,8 +40,9 @@ const ARROW_NUDGES: Record<string, readonly [number, number]> = {
 export default function Editor({ id }: Readonly<{ id: string }>) {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
-  const user = session?.user;
-  const userId = user?.id;
+  const userId = session?.user?.id;
+  const authReady = authStatus !== 'loading';
+
   const hostRef = useRef<HTMLDivElement>(null!),
     scrollRef = useRef<HTMLElement>(null!),
     canvasRef = useRef<Canvas>(null!),
@@ -53,6 +56,9 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
   const chatBaselineRef = useRef<{ token: string; signature: string } | null>(null);
   const apiRef = useRef<EditorApi | null>(null);
+  const statusRef = useRef<EditorStatus>('saved');
+  const skipUnloadWarning = useRef(false);
+  const doSaveRef = useRef<() => Promise<boolean>>(async () => false);
 
   const [ready, setReady] = useState(false);
   const [canvasState, setCanvasState] = useState<Canvas | null>(null);
@@ -61,11 +67,16 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
   const [selection, setSelection] = useState<InfographicObject[]>([]);
   const [tick, setTick] = useState(0);
   const [status, setStatus] = useState<EditorStatus>('saved');
+
   const [flags, setFlags] = useState<EditorFlags>({ undo: false, redo: false });
   const [toast, setToast] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [paymentImageUrl, setPaymentImageUrl] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const say = useCallback((msg: string) => {
     setToast(msg);
@@ -129,39 +140,71 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
     setZoom(Math.min(1, (sc.clientWidth - 96) / docRef.current.width));
   }, [setZoom]);
 
-  /* ---------- history + autosave ---------- */
+  /* ---------- history + manual save ---------- */
   const snapshot = () => {
     const { width, height, bg } = docRef.current;
     return JSON.stringify({ doc: { width, height, bg }, data: serializeCanvas() });
   };
-  const doSave = useCallback(async () => {
+
+  const buildPayload = useCallback((): DesignInput => {
     const c = canvasRef.current;
-    if (!c || !metaRef.current.loaded || !userId) return;
+    const d = docRef.current;
+    const thumb = X.toDataURL(c, d, zoomRef.current, { format: 'jpeg', scale: 300 / d.width, quality: 0.6, keepSelection: true });
+    return {
+      id,
+      name: d.name,
+      width: d.width,
+      height: d.height,
+      bg: d.bg,
+      templateId: metaRef.current.templateId || null,
+      data: serializeCanvas(),
+      thumb,
+    };
+  }, [id, serializeCanvas]);
+
+  const doSave = useCallback(async (): Promise<boolean> => {
+    if (!canvasRef.current || !metaRef.current.loaded) return false;
+
+    if (authStatus === 'loading') {
+      say('Checking your account… please try again in a moment.');
+      return false;
+    }
+
+    // Not signed in: keep the design locally, send to login, save after return.
+    if (!userId) {
+      try {
+        writeDraft({ ...buildPayload(), pendingSave: true });
+      } catch {
+        say('Could not hold your design while you sign in (storage is full).');
+        return false;
+      }
+      say('Please sign in to save your design.');
+      skipUnloadWarning.current = true;
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
+      return false;
+    }
+
     setStatus('saving');
     try {
-      const d = docRef.current;
-      const thumb = X.toDataURL(c, d, zoomRef.current, { format: 'jpeg', scale: 300 / d.width, quality: 0.6, keepSelection: true });
-      await saveDesign({
-        id,
-        name: d.name,
-        width: d.width,
-        height: d.height,
-        bg: d.bg,
-        templateId: metaRef.current.templateId || null,
-        data: serializeCanvas(),
-        thumb,
-      });
+      await saveDesign(buildPayload());
+      clearDraft(id);
       setStatus('saved');
+      say('Design saved to Your designs.');
+      return true;
     } catch (error) {
       setStatus('error');
       say(error instanceof Error ? error.message : 'Could not save your design. Please try again.');
+      return false;
     }
-  }, [id, say, serializeCanvas, userId]);
-  const scheduleSave = useCallback(() => {
-    setStatus('dirty');
-    clearTimeout(timers.current.save);
-    timers.current.save = setTimeout(doSave, 1200);
+  }, [authStatus, buildPayload, id, router, say, userId]);
+
+  useEffect(() => {
+    doSaveRef.current = doSave;
   }, [doSave]);
+
+  // Manual save only: changes just mark the design as dirty.
+  const scheduleSave = useCallback(() => setStatus('dirty'), []);
+
   const commit = useCallback(
     (immediate = false) => {
       clearTimeout(timers.current.commit);
@@ -180,6 +223,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       if (immediate) run();
       else timers.current.commit = setTimeout(run, 250);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [scheduleSave]
   );
 
@@ -210,11 +254,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
 
   /* ---------- init ---------- */
   useEffect(() => {
-    if (authStatus === 'loading') return;
-    if (!userId) {
-      router.replace(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
+    if (!authReady) return;
     const host = hostRef.current;
     const scrollContainer = scrollRef.current;
     const timerRefs = timers;
@@ -239,7 +279,10 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       const F = await import('fabric');
       if (dead) return;
       Fref.current = F;
-      const rec = await getDesign(id);
+
+      // A local draft (new design, or a design waiting to be saved after login) wins over the DB copy.
+      const draft: DraftRecord | null = readDraft(id);
+      const rec: DraftRecord | DesignRecord | null = draft ?? (userId ? await getDesign(id) : null);
       if (!rec) {
         router.replace('/infographic-maker');
         return;
@@ -311,7 +354,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
           );
           await buildTemplate(F, canvas, t);
         }
-        } else if (rec.objects && rec.objects.length) {
+      } else if (rec.objects && rec.objects.length) {
         await ensureFonts(
           rec.objects
             .map((o) => o.fontFamily)
@@ -329,24 +372,33 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       fit();
       hist.current.stack = [snapshot()];
       hist.current.idx = 0;
-      if (!rec.data) void doSave();
+      metaRef.current.loaded = true;
+      fit();
+      hist.current.stack = [snapshot()];
+      hist.current.idx = 0;
+
+      // A local draft, or a DB record with no canvas data yet (fresh template / blank
+      // canvas), has never been saved. Anything else was loaded from saved data.
+      const neverSaved = Boolean(draft) || !rec.data;
+      statusRef.current = neverSaved ? 'new' : 'saved';
+      setStatus(neverSaved ? 'new' : 'saved');
+
+      setReady(true);
       setReady(true);
 
       // ctrl/cmd + wheel zoom
       scrollContainer.addEventListener('wheel', wheel, { passive: false });
+
+      // Back from login with a design waiting to be saved: save it now.
+      if (draft?.pendingSave && userId) void doSaveRef.current();
     })().catch((e) => {
       console.error(e);
       say('Editor failed to load: ' + (e instanceof Error ? e.message : String(e)));
     });
 
-    const flush = () => {
-      if (metaRef.current.loaded) void doSave();
-    };
-    window.addEventListener('pagehide', flush);
     return () => {
       dead = true;
       editingGroupRef.current = null;
-      window.removeEventListener('pagehide', flush);
       scrollContainer.removeEventListener('mousedown', clearWorkspaceSelection);
       scrollContainer.removeEventListener('wheel', wheel);
       Object.values(timerRefs.current).forEach((timer) => {
@@ -356,7 +408,19 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       host.innerHTML = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, authStatus, userId, router]);
+  }, [id, router, authReady]);
+
+  /* ---------- warn about unsaved changes ---------- */
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (!skipUnloadWarning.current && (statusRef.current === 'dirty' || statusRef.current === 'error')) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, []);
 
   /* ---------- API used by the panels ---------- */
   const isText = (o: InfographicObject) => /text/i.test(o.type || '');
@@ -384,6 +448,14 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       return canvasState;
     },
     say,
+    async saveNow() {
+      commit(true);
+      await doSave();
+    },
+    async leave() {
+      if (statusRef.current !== 'saved' && !confirm('You have unsaved changes. Leave without saving?')) return;
+      router.push('/infographic-maker/dashboard');
+    },
     async addObject(desc) {
       const F = Fref.current,
         c = canvasRef.current;
@@ -403,90 +475,44 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         say('That image could not be loaded.');
       }
     },
-    // async setBgImage(url) {
-    //   try {
-    //     const F = Fref.current,
-    //       c = canvasRef.current,
-    //       d = docRef.current;
-    //     const prev = c.getObjects().find((o) => (o as InfographicObject).name === 'background-image');
-    //     if (prev) c.remove(prev);
-    //     const img = await F.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
-    //     const s = Math.max(d.width / img.width, d.height / img.height);
-    //     img.set({ name: 'background-image', scaleX: s, scaleY: s, left: 0, top: 0, locked: true });
-    //     applyLock(img);
-    //     c.add(img);
-    //     c.sendObjectToBack(img);
-    //     c.requestRenderAll();
-    //     sync();
-    //   } catch {
-    //     say('That image could not be loaded.');
-    //   }
-    // },
     async setBgImage(url) {
-  try {
-    const F = Fref.current;
-    const c = canvasRef.current;
-    const d = docRef.current;
+      try {
+        const F = Fref.current;
+        const c = canvasRef.current;
+        const d = docRef.current;
+        if (!F || !c || !d) return;
 
-    if (!F || !c || !d) return;
+        const prev = c.getObjects().find((o) => (o as InfographicObject).name === 'background-image');
+        if (prev) c.remove(prev);
 
-    // Remove existing background image
-    const prev = c
-      .getObjects()
-      .find(
-        (o) =>
-          (o as InfographicObject).name === 'background-image'
-      );
+        const img = await F.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        const imageWidth = img.width || 1;
+        const imageHeight = img.height || 1;
+        const scale = Math.max(d.width / imageWidth, d.height / imageHeight);
 
-    if (prev) {
-      c.remove(prev);
-    }
-
-    const img = await F.FabricImage.fromURL(url, {
-      crossOrigin: 'anonymous',
-    });
-
-    const imageWidth = img.width || 1;
-    const imageHeight = img.height || 1;
-
-    // Scale image so it completely covers the page.
-    const scale = Math.max(
-      d.width / imageWidth,
-      d.height / imageHeight
-    );
-
-    img.set({
-      name: 'background-image',
-
-      // Keep original aspect ratio
-      scaleX: scale,
-      scaleY: scale,
-
-      // Center image on the page
-      originX: 'center',
-      originY: 'center',
-      left: d.width / 2,
-      top: d.height / 2,
-
-      locked: true,
-      selectable: false,
-      evented: false,
-    });
-
-    applyLock(img);
-
-    c.add(img);
-    c.sendObjectToBack(img);
-
-    img.setCoords();
-
-    c.requestRenderAll();
-    sync();
-  } catch (error) {
-    console.error('Background image error:', error);
-    say('That image could not be loaded.');
-  }
-},
+        img.set({
+          name: 'background-image',
+          scaleX: scale,
+          scaleY: scale,
+          originX: 'center',
+          originY: 'center',
+          left: d.width / 2,
+          top: d.height / 2,
+          locked: true,
+          selectable: false,
+          evented: false,
+        });
+        applyLock(img);
+        c.add(img);
+        c.sendObjectToBack(img);
+        img.setCoords();
+        c.requestRenderAll();
+        sync();
+      } catch (error) {
+        console.error('Background image error:', error);
+        say('That image could not be loaded.');
+      }
+    },
     update(props) {
       active().forEach((o) => {
         if (o.locked && !('locked' in props)) return;
@@ -530,26 +556,6 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       fire(o);
       sync();
     },
-    // async updateChart(o, patch) {
-    //   const F = Fref.current,
-    //     c = canvasRef.current;
-    //   const style = { ...o.chartStyle, ...patch.style };
-    //   await ensureFonts(style.fontFamily ? [style.fontFamily] : []);
-    //   const g = buildChart(F, {
-    //     chartType: patch.chartType || o.chartType,
-    //     data: patch.data || o.chartData,
-    //     width: o.width * o.scaleX,
-    //     height: o.height * o.scaleY,
-    //     ...style,
-    //   });
-    //   g.set({ left: o.left, top: o.top, angle: o.angle, opacity: o.opacity });
-    //   const i = c.getObjects().indexOf(o);
-    //   c.remove(o);
-    //   c.insertAt(i, g);
-    //   c.setActiveObject(g);
-    //   c.requestRenderAll();
-    //   sync();
-    // },
     async updateChart(o, patch) {
       const F = Fref.current;
       const c = canvasRef.current;
@@ -564,18 +570,11 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       const flipX = o.flipX ?? false;
       const flipY = o.flipY ?? false;
 
-      const style = {
-        ...o.chartStyle,
-        ...patch.style,
-      };
-
+      const style = { ...o.chartStyle, ...patch.style };
       await ensureFonts(style.fontFamily ? [style.fontFamily] : []);
 
-      // IMPORTANT:
-      // Use the chart's original logical dimensions,
-      // not width * scale.
+      // Use the chart's original logical dimensions, not width * scale.
       const chartWidth = o.chartWidth ?? o.width ?? 420;
-
       const chartHeight = o.chartHeight ?? o.height ?? 280;
 
       const g = buildChart(F, {
@@ -588,28 +587,14 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         top,
       });
 
-      // Restore the exact visual transform
-      g.set({
-        left,
-        top,
-        scaleX,
-        scaleY,
-        angle,
-        opacity,
-        flipX,
-        flipY,
-      });
-
+      g.set({ left, top, scaleX, scaleY, angle, opacity, flipX, flipY });
       g.setCoords();
 
       const i = c.getObjects().indexOf(o);
-
       c.remove(o);
       c.insertAt(i, g);
-
       c.setActiveObject(g);
       c.requestRenderAll();
-
       sync();
     },
     remove() {
@@ -878,15 +863,6 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         say('Export failed: ' + (e instanceof Error ? e.message : String(e)));
       }
     },
-    async saveNow() {
-      clearTimeout(timers.current.save);
-      commit(true);
-      await doSave();
-    },
-    async leave() {
-      await api.saveNow();
-      router.push('/infographic-maker');
-    },
     setZoom,
     fit,
   };
@@ -996,7 +972,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         const changes = Object.entries(operation.properties)
           .map(([key, value]) => {
             const before = oldValues[key] ?? 'default';
-            const format = (item: string | number | boolean) => key === 'text' ? `“${item}”` : String(item);
+            const format = (item: string | number | boolean) => (key === 'text' ? `“${item}”` : String(item));
             return `${propertyNames[key] || key}: ${format(before)} → ${format(String(value))}`;
           })
           .join(', ');
@@ -1013,19 +989,21 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       }
       if (operation.type === 'add_text') return `Add text: “${operation.text.slice(0, 80)}”`;
       if (operation.type === 'set_background') return `Set page background to ${operation.color}`;
-      if (operation.type === 'resize_page') return `Resize page to ${operation.width ?? design.width} × ${operation.height ?? design.height}`;
-      if (operation.type === 'set_theme') return `Apply the ${THEMES[operation.theme].name} theme while keeping existing content and layout`;
+      if (operation.type === 'resize_page')
+        return `Resize page to ${operation.width ?? design.width} × ${operation.height ?? design.height}`;
+      if (operation.type === 'set_theme')
+        return `Apply the ${THEMES[operation.theme].name} theme while keeping existing content and layout`;
       if (operation.type === 'apply_template') return `Replace the current design with the “${operation.templateId}” layout`;
       if (operation.type === 'arrange_objects') return `Arrange ${operation.indexes.length} objects into a ${operation.layout} layout`;
       if (operation.type === 'update_many') {
-        const property = Object.entries(operation.properties).map(([key, value]) => `${key}: ${String(value)}`).join(', ');
+        const property = Object.entries(operation.properties)
+          .map(([key, value]) => `${key}: ${String(value)}`)
+          .join(', ');
         return `Change ${operation.indexes.length} selected items (${property})`;
       }
       throw new Error('The assistant proposed an unsupported design change. Nothing was changed.');
     });
-    const preview = previewItems.length > 8
-      ? [...previewItems.slice(0, 8), `…and ${previewItems.length - 8} more changes`]
-      : previewItems;
+    const preview = previewItems.length > 8 ? [...previewItems.slice(0, 8), `…and ${previewItems.length - 8} more changes`] : previewItems;
     return { inScope: result.inScope, reply: result.reply, operations, preview, revision, scopePrompt };
   };
 
@@ -1039,7 +1017,9 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       doc: { width: docRef.current.width, height: docRef.current.height, bg: docRef.current.bg },
       data: serializeCanvas(),
     });
-    if (baseline.signature !== currentSignature) throw new Error('The design changed while the assistant was preparing edits. Nothing was changed; please send the request again.');
+    if (baseline.signature !== currentSignature) {
+      throw new Error('The design changed while the assistant was preparing edits. Nothing was changed; please send the request again.');
+    }
 
     const expandedOperations = operations.flatMap((operation) =>
       operation.type === 'update_many'
@@ -1100,10 +1080,14 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
           throw new Error('The requested item size does not fit within the page.');
         }
       }
-      if (operation.type === 'arrange_objects' &&
+      if (
+        operation.type === 'arrange_objects' &&
         (operation.indexes.length < 2 ||
-          operation.indexes.some((index) => !Number.isInteger(index) || index < 0 || index >= objects.length || (objects[index] as InfographicObject).locked) ||
-          (operation.gap !== undefined && (!Number.isFinite(operation.gap) || operation.gap < 0 || operation.gap > 300)))) {
+          operation.indexes.some(
+            (index) => !Number.isInteger(index) || index < 0 || index >= objects.length || (objects[index] as InfographicObject).locked
+          ) ||
+          (operation.gap !== undefined && (!Number.isFinite(operation.gap) || operation.gap < 0 || operation.gap > 300)))
+      ) {
         throw new Error('The assistant returned an invalid section layout. Nothing was changed.');
       }
     }
@@ -1117,16 +1101,27 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
         if (target.locked) throw new Error('The assistant cannot edit locked design items.');
         if (operation.type === 'update_object') {
           const props = operation.properties;
-          if (props.text !== undefined && (typeof props.text !== 'string' || props.text.length > 500)) throw new Error('The assistant returned invalid text.');
-          if (props.text !== undefined && !/text/i.test(target.type || '')) throw new Error('Text edits can only be applied to text items.');
+          if (props.text !== undefined && (typeof props.text !== 'string' || props.text.length > 500))
+            throw new Error('The assistant returned invalid text.');
+          if (props.text !== undefined && !/text/i.test(target.type || ''))
+            throw new Error('Text edits can only be applied to text items.');
           if (props.fill !== undefined && !isHexColor(props.fill)) throw new Error('The assistant returned an invalid color.');
-          if (props.fontSize !== undefined && (!Number.isFinite(props.fontSize) || props.fontSize < 8 || props.fontSize > 180)) throw new Error('The assistant returned an invalid font size.');
-          if (props.opacity !== undefined && (!Number.isFinite(props.opacity) || props.opacity < 0 || props.opacity > 1)) throw new Error('The assistant returned an invalid opacity.');
-          if (props.angle !== undefined && (!Number.isFinite(props.angle) || props.angle < -360 || props.angle > 360)) throw new Error('The assistant returned an invalid angle.');
+          if (props.fontSize !== undefined && (!Number.isFinite(props.fontSize) || props.fontSize < 8 || props.fontSize > 180))
+            throw new Error('The assistant returned an invalid font size.');
+          if (props.opacity !== undefined && (!Number.isFinite(props.opacity) || props.opacity < 0 || props.opacity > 1))
+            throw new Error('The assistant returned an invalid opacity.');
+          if (props.angle !== undefined && (!Number.isFinite(props.angle) || props.angle < -360 || props.angle > 360))
+            throw new Error('The assistant returned an invalid angle.');
           if ((props.left !== undefined && !Number.isFinite(props.left)) || (props.top !== undefined && !Number.isFinite(props.top))) {
             throw new Error('The assistant returned an invalid position.');
           }
-          if (props.fontWeight !== undefined && !(typeof props.fontWeight === 'string' || (Number.isFinite(props.fontWeight) && props.fontWeight >= 100 && props.fontWeight <= 900))) {
+          if (
+            props.fontWeight !== undefined &&
+            !(
+              typeof props.fontWeight === 'string' ||
+              (Number.isFinite(props.fontWeight) && props.fontWeight >= 100 && props.fontWeight <= 900)
+            )
+          ) {
             throw new Error('The assistant returned an invalid font weight.');
           }
           if (props.textAlign !== undefined && !['left', 'center', 'right', 'justify'].includes(props.textAlign)) {
@@ -1137,26 +1132,40 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
             if (!/text/i.test(target.type || '')) throw new Error('Typography changes can only be applied to text items.');
             fontNames.push(props.fontFamily);
           }
-          if ((props.fontSize !== undefined || props.fontWeight !== undefined || props.fontFamily !== undefined ||
-            props.fontStyle !== undefined || props.underline !== undefined || props.linethrough !== undefined ||
-            props.textAlign !== undefined) && !/text/i.test(target.type || '')) {
+          if (
+            (props.fontSize !== undefined ||
+              props.fontWeight !== undefined ||
+              props.fontFamily !== undefined ||
+              props.fontStyle !== undefined ||
+              props.underline !== undefined ||
+              props.linethrough !== undefined ||
+              props.textAlign !== undefined) &&
+            !/text/i.test(target.type || '')
+          ) {
             throw new Error('Typography changes can only be applied to text items.');
           }
         }
       } else if (operation.type === 'add_text') {
         if (!operation.text.trim() || operation.text.length > 300) throw new Error('The assistant returned invalid text.');
         if (operation.fill && !isHexColor(operation.fill)) throw new Error('The assistant returned an invalid color.');
-        if (operation.fontSize !== undefined && (!Number.isFinite(operation.fontSize) || operation.fontSize < 8 || operation.fontSize > 120)) throw new Error('The assistant returned an invalid font size.');
+        if (
+          operation.fontSize !== undefined &&
+          (!Number.isFinite(operation.fontSize) || operation.fontSize < 8 || operation.fontSize > 120)
+        )
+          throw new Error('The assistant returned an invalid font size.');
         if (operation.fontFamily) {
           if (!isAvailableFont(operation.fontFamily)) throw new Error('The assistant selected an unsupported font.');
           fontNames.push(operation.fontFamily);
         }
       } else if (operation.type === 'set_background' && !isHexColor(operation.color)) {
         throw new Error('The assistant returned an invalid background color.');
-      } else if (operation.type === 'resize_page' &&
+      } else if (
+        operation.type === 'resize_page' &&
         ((operation.width !== undefined && (!Number.isFinite(operation.width) || operation.width < 200 || operation.width > 4000)) ||
-          (operation.height !== undefined && (!Number.isFinite(operation.height) || operation.height < 200 || operation.height > MAX_PAGE_HEIGHT)) ||
-          (operation.width === undefined && operation.height === undefined))) {
+          (operation.height !== undefined &&
+            (!Number.isFinite(operation.height) || operation.height < 200 || operation.height > MAX_PAGE_HEIGHT)) ||
+          (operation.width === undefined && operation.height === undefined))
+      ) {
         throw new Error('The assistant returned invalid page dimensions.');
       } else if (operation.type === 'set_theme' && !(operation.theme in THEMES)) {
         throw new Error('The assistant selected an unsupported design theme.');
@@ -1189,18 +1198,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       for (const operation of expandedOperations) {
         if (operation.type === 'update_object') {
           const target = objects[operation.index] as InfographicObject;
-          const {
-            text,
-            fill,
-            fontSize,
-            fontFamily,
-            fontWeight,
-            textAlign,
-            opacity,
-            angle,
-            left,
-            top,
-          } = operation.properties;
+          const { text, fill, fontSize, fontFamily, fontWeight, textAlign, opacity, angle, left, top } = operation.properties;
           const properties: Record<string, unknown> = {};
           if (text !== undefined) properties.text = text;
           if (fill !== undefined) properties.fill = fill;
@@ -1216,7 +1214,8 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
           if (left !== undefined) properties.left = clamp(left, 0, docRef.current.width - 20);
           if (top !== undefined) properties.top = clamp(top, 0, docRef.current.height - 20);
           target.set(properties);
-          if (/text/i.test(target.type || '') && 'initDimensions' in target && typeof target.initDimensions === 'function') target.initDimensions();
+          if (/text/i.test(target.type || '') && 'initDimensions' in target && typeof target.initDimensions === 'function')
+            target.initDimensions();
           target.dirty = true;
           target.setCoords();
         } else if (operation.type === 'delete_object') {
@@ -1236,11 +1235,23 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
           const recolor = (object: FabricObject) => {
             const fill = object.fill;
             if (typeof fill === 'string' && /^#[\da-f]{6}$/i.test(fill)) {
-              const rgb = fill.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)) || [0, 0, 0];
+              const rgb = fill
+                .slice(1)
+                .match(/.{2}/g)
+                ?.map((part) => parseInt(part, 16)) || [0, 0, 0];
               const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
               const isTextObject = /text/i.test(object.type || '');
               if (isTextObject) {
-                object.set('fill', luminance > 0.9 ? theme.darkBandText : luminance < 0.15 ? theme.textColor : luminance < 0.65 ? theme.mutedText : theme.primary);
+                object.set(
+                  'fill',
+                  luminance > 0.9
+                    ? theme.darkBandText
+                    : luminance < 0.15
+                      ? theme.textColor
+                      : luminance < 0.65
+                        ? theme.mutedText
+                        : theme.primary
+                );
               } else if (luminance > 0.94) {
                 object.set('fill', theme.cardBg);
               } else if (luminance < 0.12) {
@@ -1280,10 +1291,12 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       }
       for (const operation of operations) {
         if (operation.type !== 'arrange_objects') continue;
-        const arranged = operation.indexes.map((index) => objects[index]).sort((a, b) => {
-          const primary = operation.layout === 'horizontal' ? a.left - b.left : a.top - b.top;
-          return primary || objects.indexOf(a) - objects.indexOf(b);
-        });
+        const arranged = operation.indexes
+          .map((index) => objects[index])
+          .sort((a, b) => {
+            const primary = operation.layout === 'horizontal' ? a.left - b.left : a.top - b.top;
+            return primary || objects.indexOf(a) - objects.indexOf(b);
+          });
         const bounds = arranged.reduce(
           (box, object) => ({
             left: Math.min(box.left, object.left || 0),
@@ -1380,7 +1393,6 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
           },
           s: () => {
             void a.saveNow();
-            a.say('Saved');
           },
         };
         const action = actions[key];
@@ -1407,15 +1419,16 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
     return () => window.removeEventListener('keydown', onKey);
   }, [exitBlockEditing]);
 
-  if (authStatus !== 'authenticated' || !userId) {
-    return <div className="ie-boot">Checking your account…</div>;
-  }
-
-  // Function to handle listing the custom infographic on the website
+  // Submit the infographic for listing on the website (requires an account).
   const handleListOnWebsite = async () => {
     const canvas = canvasRef.current;
     const doc = docRef.current;
     if (!canvas) return;
+
+    if (!userId) {
+      void doSave(); // stores a draft and sends the user to login
+      return;
+    }
 
     try {
       setIsPublishing(true);
@@ -1435,7 +1448,7 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       const formData = new FormData();
       formData.append('image', blob, 'custom-infographic.png');
 
-      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/client-infographics/temp-upload`, {
+      const uploadRes = await fetch(`${apiOrigin}/api/client-infographics/temp-upload`, {
         method: 'POST',
         body: formData,
       });
@@ -1455,28 +1468,62 @@ export default function Editor({ id }: Readonly<{ id: string }>) {
       setIsPublishing(false);
     }
   };
+
+  const checkUserSession = () => {
+    if (authStatus === 'loading') {
+      say('Checking your account… please try again in a moment.');
+      return false;
+    }
+    if (!userId) {
+      try {
+        writeDraft({ ...buildPayload(), pendingSave: true });
+      } catch {
+        say('Could not hold your design while you sign in (storage is full).');
+        return false;
+      }
+      say('Please sign in to export your design.');
+      skipUnloadWarning.current = true;
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
+      return false;
+    }
+    return true;
+  };
+
   return (
     <div className="ie-app">
-      <TopBar api={api} doc={doc} zoom={zoom} status={status} flags={flags} handleListClick={handleListOnWebsite} isPublishing={isPublishing} />
+      <TopBar
+        api={api}
+        doc={doc}
+        status={status}
+        handleListClick={handleListOnWebsite}
+        isPublishing={isPublishing}
+        checkUserSession={checkUserSession}
+      />
       <div className="ie-body">
         <LeftPanel api={api} doc={doc} userId={userId} />
-        <main className="ie-work" ref={scrollRef}>
-          <div className="ie-stage">
-            <div className="ie-sheet" ref={hostRef} style={{ width: doc.width * zoom, height: doc.height * zoom }} />
-          </div>
-          {!ready && <div className="ie-boot">Loading editor…</div>}
-        </main>
+          <div className="ie-workwrap">
+          <main className="ie-work" ref={scrollRef}>
+            <div className="ie-stage">
+              <div className="ie-canvas-col" style={{ width: doc.width * zoom }}>
+                {ready && <CanvasToolbar api={api} flags={flags} />}
+                <div className="ie-sheet" ref={hostRef} style={{ width: doc.width * zoom, height: doc.height * zoom }} />
+              </div>
+            </div>
+            {!ready && <div className="ie-boot">Loading editor…</div>}
+          </main>
+          {ready && <ZoomControls api={api} zoom={zoom} />}
+        </div>
         <RightPanel api={api} doc={doc} selection={selection} tick={tick} />
       </div>
+      {/* chat, PaymentStep and toast stay exactly as they are */}
       {ready && chatOpen ? (
         <DesignChat onSend={sendDesignChatMessage} onApply={applyAIEditOperations} onClose={() => setChatOpen(false)} />
       ) : ready ? (
         <DesignChatButton onClick={() => setChatOpen(true)} />
       ) : null}
-      {paymentImageUrl && (
-        <PaymentStep initialImageUrl={paymentImageUrl} onClose={() => setPaymentImageUrl(null)} />
-      )}
+      {paymentImageUrl && <PaymentStep initialImageUrl={paymentImageUrl} onClose={() => setPaymentImageUrl(null)} />}
       {toast && <div className="ie-toast">{toast}</div>}
     </div>
+
   );
 }
